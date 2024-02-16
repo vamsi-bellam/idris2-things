@@ -86,7 +86,7 @@ mkSingle False = []
 --   Nil: Vect 0 a
 --   (::) : a -> Vect k a -> Vect (1 + k) a
 
--- (++) : Vect n a -> Vect m a -> Vect (n + m) a
+-- (++) : Examples.Vect n a -> Examples.Vect m a -> Examples.Vect (n + m) a
 -- (++) Nil       ys = ys
 -- (++) (x :: xs) ys = x :: xs ++ ys
 
@@ -107,7 +107,8 @@ greet: IO ()
 greet = do putStrLn "What is your name"
            name <-  getLine 
            putStrLn ("Hello, " ++ name)
-
+           
+-- Only one main , naturally entrypoint of program
 main: IO ()
 main = putStrLn ((show first))
 
@@ -116,15 +117,15 @@ IfThenElse: Bool -> a -> a -> a
 IfThenElse True t e = t
 IfThenElse False t e = e
 
-do1: IO ()
-do1 = (putStrLn "I am true block")
+task1: IO ()
+task1 = (putStrLn "I am true block")
 
-do2: IO ()
-do2 = (putStrLn "I am true block")
+task2: IO ()
+task2 = (putStrLn "I am false block")
 
--- Expecting both to print, but something else is happening
+-- Expecting both to print, but not happening
 oneOfTwo: Bool -> IO ()
-oneOfTwo b = (IfThenElse b do1 do2)
+oneOfTwo b = (IfThenElse b task1 task2)
 
 -- Streams 
 
@@ -135,8 +136,25 @@ makeUpTo: Int -> Stream Int -> List Int
 
 makeUpTo 0 l = []
 makeUpTo n (x :: xs) = x :: (makeUpTo (n-1) xs) 
-  
+
+-- Snoc lists
+
+firstThree: SnocList Int 
+firstThree = Lin :< 1 :< 2 :< 3
+
+doubleOfThree: SnocList Int 
+doubleOfThree = (mapMaybe (\x => Just (x*2)) firstThree)
+
+printSnocList: SnocList Int -> IO ()
+printSnocList Lin = putStrLn "End of list"
+printSnocList (xs :< x) = do (putStrLn (show x))
+                             (printSnocList xs)
 
 
+highestScores: List (String, Int)
+highestScores = [("ODI", 264), ("TEST", 400), ("T20I", 175)]
 
-
+printHighestScore: List (String, Int) -> IO () 
+printHighestScore [] = putStrLn  "End of List"
+printHighestScore ((match, score) :: xs) = do (putStrLn ("Highest score in " ++ match ++ " is " ++ (show score)))
+                                              printHighestScore xs

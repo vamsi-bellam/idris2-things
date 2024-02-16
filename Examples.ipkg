@@ -16,13 +16,13 @@ authors = "vamsibellam"
 -- depends =
 
 -- modules to install
--- modules =
+modules = Examples
 
 -- main file (i.e. file to load at REPL)
--- main =
+main = Examples
 
 -- name of executable
--- executable =
+executable = examples
 -- opts =
 sourcedir = "src"
 -- builddir =
