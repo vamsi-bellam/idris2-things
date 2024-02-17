@@ -49,6 +49,13 @@ reverse xs = reverseAcc [] xs where
   reverseAcc acc [] = acc
   reverseAcc acc (x :: xs) = reverseAcc (x :: acc) xs 
 
+-- An alternative using let 
+
+reverse' : List a -> List a
+reverse' xs = let reverseAcc' : List a -> List a -> List a 
+                  reverseAcc' acc [] = acc
+                  reverseAcc' acc (x :: xs) = reverseAcc' (x :: acc) xs 
+              in reverseAcc' [] xs
 
 -- even: Int -> Bool
 -- even 0 = True
@@ -107,7 +114,7 @@ greet: IO ()
 greet = do putStrLn "What is your name"
            name <-  getLine 
            putStrLn ("Hello, " ++ name)
-           
+
 -- Only one main , naturally entrypoint of program
 main: IO ()
 main = putStrLn ((show first))
@@ -158,3 +165,34 @@ printHighestScore: List (String, Int) -> IO ()
 printHighestScore [] = putStrLn  "End of List"
 printHighestScore ((match, score) :: xs) = do (putStrLn ("Highest score in " ++ match ++ " is " ++ (show score)))
                                               printHighestScore xs
+
+record Ranking where
+    constructor MkRanking 
+    odi, test, t20 : Int
+
+data Role = Batter | Bowler | Allrounder
+
+record Player where 
+    constructor MkPlayer 
+    firstName, lastName, country : String   
+    ranking: Ranking
+    age: Int
+    role: Role
+
+
+player1: Player 
+player1 = (MkPlayer "Rohit" "Sharma" "India" ((MkRanking 2 5 9)) 36 Batter)
+
+-- Expected age to have 33, but getting -33
+player2: Player
+player2 = {firstName := "Surya", lastName := "Yadav", ranking := (MkRanking  3 6 1), age $= ((-) 3)} player1
+
+-- List comprehensions
+pythag: Int -> List (Int, Int, Int)
+pythag n = [ (x, y, z) | z <- [1..n], y <- [1..n], x <- [1..n], x*x + y*y == z*z ]
+
+showRole: Role -> IO ()
+showRole role = case role of 
+                    Batter => putStrLn "Batter"
+                    Bowler => putStrLn "Bowler"
+                    Allrounder => (putStr "Allrounder")
