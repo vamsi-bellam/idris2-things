@@ -43,11 +43,11 @@ natToNumbers: Nat -> Int
 natToNumbers Z = 0
 natToNumbers (S k) =  1 + natToNumbers k
 
-reverse : List a -> List a
-reverse xs = reverseAcc [] xs where
-  reverseAcc : List a -> List a -> List a 
-  reverseAcc acc [] = acc
-  reverseAcc acc (x :: xs) = reverseAcc (x :: acc) xs 
+-- reverse : List a -> List a
+-- reverse xs = reverseAcc [] xs where
+--   reverseAcc : List a -> List a -> List a 
+--   reverseAcc acc [] = acc
+--   reverseAcc acc (x :: xs) = reverseAcc (x :: acc) xs 
 
 -- An alternative using let 
 
@@ -130,7 +130,7 @@ task1 = (putStrLn "I am true block")
 task2: IO ()
 task2 = (putStrLn "I am false block")
 
--- Expecting both to print, but not happening
+-- Expecting both to print, but not happening => ans: IO itself is Lazy
 oneOfTwo: Bool -> IO ()
 oneOfTwo b = (IfThenElse b task1 task2)
 
@@ -183,9 +183,12 @@ record Player where
 player1: Player 
 player1 = (MkPlayer "Rohit" "Sharma" "India" ((MkRanking 2 5 9)) 36 Batter)
 
+-- flip : (a -> b -> c) -> b -> a -> c
+-- flip f x y = f y x
+
 -- Expected age to have 33, but getting -33
 player2: Player
-player2 = {firstName := "Surya", lastName := "Yadav", ranking := (MkRanking  3 6 1), age $= ((-) 3)} player1
+player2 = {firstName := "Surya", lastName := "Yadav", ranking := (MkRanking  3 6 1), age $= flip (-) 3} player1
 
 -- List comprehensions
 pythag: Int -> List (Int, Int, Int)
@@ -196,3 +199,88 @@ showRole role = case role of
                     Batter => putStrLn "Batter"
                     Bowler => putStrLn "Bowler"
                     Allrounder => (putStr "Allrounder")
+
+interface Show' a where 
+    show' : a -> String 
+
+
+
+
+Show' Nat where
+    show' Z = "Z"
+    show' (S k) = "S" ++ (show' k)
+
+-- Int inplace of Integer not working, also negative integers having some different type: Because of idris2 type inference
+Show' Int where 
+    show' 0 = "0"
+    show' _ = "yet to impl!"
+
+-- Extending interfaces 
+
+interface Eq' a where
+    (==) : a -> a -> Bool
+    (/=) : a -> a -> Bool
+
+    x /= y = not (x == y)
+    x == y = not (x /= y)
+
+
+
+data Ordering' = EQ | LT | GT 
+
+-- Not implemented Eq' for Integer, hence taking the implementation from Prelude
+interface Eq a => Ord' a where 
+    compare: a -> a -> Ordering'
+
+
+Ord' Integer where
+     compare f s = if f > s then GT else if f < s then LT else EQ
+
+
+intToNat: Nat -> Integer 
+intToNat Z = 0 
+intToNat (S k) = 1 + intToNat k
+
+
+splitHalf: List a -> (List a , List a)
+splitHalf ls = splitHelper ls [] [] ((div (intToNat (length ls)) 2)) where
+    splitHelper: List a -> List a -> List a -> Integer -> (List a, List a)
+    splitHelper [] first second _ = (reverse first, reverse second)
+    splitHelper (hd :: tl) first second count = if count == 0 then splitHelper tl first (hd :: second) count 
+                                                 else splitHelper tl (hd :: first) second (count - 1)
+
+merge': (Ord' a) => List a -> List a -> List a 
+merge' [] [] = []
+merge' [] s = s 
+merge' f [] = f 
+merge' (hd1 :: tl1) (hd2 :: tl2) = case (compare hd1 hd2) of 
+                                        -- below we have duplicated two lines, see if there is better like in Ocaml "|"
+                                        EQ => (hd1 :: hd2 :: (merge' tl1 tl2))
+                                        LT => (hd1 :: (merge' tl1 (hd2 :: tl2)))
+                                        GT => (hd2 :: (merge' (hd1 :: tl1) tl2))
+
+sort': Ord' a => List a -> List a
+sort' [] = []
+sort' [s] = [s]
+sort' ls = let (firstHalf, secondHalf) = (splitHalf ls) in 
+          (merge' (sort' firstHalf) (sort' secondHalf))
+
+
+-- Implementing Show' interface for List won't becauuse, List is function, but Show' interface just takes a single type 'a'
+
+
+
+
+-- Functor
+
+-- In the doc, there is 0 before `f`, why?
+interface Functor' (f : Type -> Type) where 
+    map': (a -> b) -> f a -> f b
+
+Functor' List where
+  map' f []      = []
+  map' f (x::xs) = f x :: map' f xs
+
+
+
+
