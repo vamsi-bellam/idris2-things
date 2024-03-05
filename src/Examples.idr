@@ -1,3 +1,4 @@
+-- module src.Examples is giving error, how to name nested modules
 module Examples
 import Data.Fin
 import Data.Vect
@@ -5,11 +6,14 @@ import System.File
 
 -- Things from basic examples page
 
+-- we can give names to types like `isInt`
 IntOrString: (isInt: Bool) -> Type
 
 IntOrString True = Int 
 IntOrString False = String 
 
+-- Type of the below function changes depends on the argument isInt 
+-- if isInt is True, then signature is like (Int -> String) else (String -> String)
 showOrReverse: (isInt: Bool) -> IntOrString isInt -> String 
 showOrReverse True x = show x
 showOrReverse False x = reverse x 
@@ -211,9 +215,15 @@ Show' Nat where
     show' (S k) = "S" ++ (show' k)
 
 -- Int inplace of Integer not working, also negative integers having some different type: Because of idris2 type inference
-Show' Int where 
-    show' 0 = "0"
-    show' _ = "yet to impl!"
+Show' Integer where 
+    show' x = show x
+
+showList: Show' a => List a -> String 
+showList ls = "[" ++ showListHelper ls ++ "]" where 
+    showListHelper: List a -> String
+    showListHelper [] = ""
+    showListHelper (hd :: tl) = let rest = (showListHelper tl) in 
+                                if rest == "" then (show' hd) else ((show' hd) ++ "," ++ rest)
 
 -- Extending interfaces 
 
@@ -253,11 +263,13 @@ merge': (Ord' a) => List a -> List a -> List a
 merge' [] [] = []
 merge' [] s = s 
 merge' f [] = f 
-merge' (hd1 :: tl1) (hd2 :: tl2) = case (compare hd1 hd2) of 
+-- @ is like "as" in Ocaml
+merge' f@(hd1 :: tl1) s@(hd2 :: tl2) = case (compare hd1 hd2) of 
                                         -- below we have duplicated two lines, see if there is better like in Ocaml "|"
                                         EQ => (hd1 :: hd2 :: (merge' tl1 tl2))
-                                        LT => (hd1 :: (merge' tl1 (hd2 :: tl2)))
-                                        GT => (hd2 :: (merge' (hd1 :: tl1) tl2))
+                                        LT => (hd1 :: (merge' tl1 s))
+                                        GT => (hd2 :: (merge' f tl2))
+
 
 sort': Ord' a => List a -> List a
 sort' [] = []
@@ -265,22 +277,142 @@ sort' [s] = [s]
 sort' ls = let (firstHalf, secondHalf) = (splitHalf ls) in 
           (merge' (sort' firstHalf) (sort' secondHalf))
 
+showAndSort: (Ord' a, Show' a) => List a -> String 
+showAndSort ls = (showList (sort' ls))
+
 
 -- Implementing Show' interface for List won't becauuse, List is function, but Show' interface just takes a single type 'a'
 
 
+-- What is the use of this? who can use/implement this?
+interface X where
+    print: Int -> String
+
 
 
 -- Functor
-
--- In the doc, there is 0 before `f`, why?
 interface Functor' (f : Type -> Type) where 
     map': (a -> b) -> f a -> f b
 
 Functor' List where
   map' f []      = []
-  map' f (x::xs) = f x :: map' f xs
+  map' f (x :: xs) = f x :: map' f xs
+
+interface Functor' f => Applicative' (0 f : Type -> Type) where 
+    pure': a -> f a
+
+-- Not working as expected, expected it to list value a to [a]
+Applicative' List where
+    pure' x = [x]
+
+
+interface Applicative' f => Monad' (0 f: Type -> Type) where 
+    (>>=): f a -> (a -> f b) -> f b 
+
+data Option a = Nothing | Just a
+
+Functor' Option where 
+    map' f Nothing = Nothing
+    map' f (Just x) = Just (f x)
+
+Applicative' Option where 
+    pure' = Just
+
+Monad' Option where 
+    Nothing >>= k = Nothing 
+    (Just x) >>= k = k x
+
+
+optAdd: Option Int -> Option Int -> Option Int 
+-- optAdd x y = do x' <- x 
+--                 y' <- y 
+--                 pure' (x' +  y')
+-- !e, an alternate syntax for do notationm where it evaluates and implicitly binds it
+optAdd x y = (pure' (!x + !y))
+
+
+-- Multiplicities 
+
+-- 
+append': Vect n a -> Vect m a -> Vect (n + m) a
+append' xs ys = ?append_arg
+
+
+duplicate: (1 x : a) -> (a, a)
+-- This should not give error as per doc, bu getting error
+-- duplicate x = (x, ?help)
+
+
+data Lin : Type -> Type where 
+    MkLin: (1 _ : a) -> Lin a 
+
+data Unr : Type -> Type where
+    MkUnr: a -> Unr a
+
+getLin: (1 _ : Lin a) -> a 
+getLin (MkLin x) = ?getLin_rhs_0
+
+getUnt: (1 _: Unr a) -> a 
+getUnt (MkUnr x) = ?gu
+
+data DoorState = Open | Closed
+
+data Door : DoorState -> Type where
+     MkDoor : (doorId : Int) -> Door st
+
+openDoor: (1 d: Door Closed) -> Door Open
+
+closeDoor: (1 d: Door Open) -> Door Closed
+
+id': Type -> Type
+id' x = x
 
 
 
+-- This is an ideal type signature, if given a vector and returns length of vector
+-- Side Note: 2 is an Integer, but return type is Nat, still no error?
+vlen: Vect n a -> Nat 
+vlen xs = 2
+
+-- This is where you are expecting the n as argument to function
+vlen': (n : Nat) -> Vect n a -> Nat
+vlen' n xs = n
+
+-- Using curly braces means, you can stating that n (that appears in Vect) needed for usage at runtime
+vlen'': {n : Nat} -> Vect n a -> Nat 
+vlen'' xs = n
+
+-- Same as above, but restircting the usage of n at runtime to 1 ( by default, its unlimited )
+vlen''': {1 n : Nat} -> Vect n a -> Nat 
+vlen''' xs = n
+
+
+sample: Vect (S Z) Integer 
+sample = 2 :: Nil
+
+
+-- Pattern matching on Types 
+
+showType: Type -> String 
+showType Int = "Int"
+showType String = "String"
+showType (Nat -> a) = ?help
+-- This gives error?
+-- showType (Nat -> Integer -> a) = ?help2
+showType _ = "Others"
+
+-- Theorem Proving
+
+data EqualNat: Nat -> Nat -> Type where 
+    SameNat: (n: Nat) -> EqualNat n n 
+
+twoEqualsTwo: EqualNat (1+1) 2
+twoEqualsTwo = SameNat 2
+
+data Equal': a -> b -> Type where
+   -- using x in place of a showing shadowing wraning
+    Refl': Equal' a a
+
+twoPlusTwoBad: (Equal' (3+2) 2)
+twoPlusTwoBad = Refl'
 
