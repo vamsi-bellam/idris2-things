@@ -406,6 +406,7 @@ showType _ = "Others"
 data EqualNat: Nat -> Nat -> Type where 
     SameNat: (n: Nat) -> EqualNat n n 
 
+-- Eventhough I have given type Nat, I am able to pass Int
 twoEqualsTwo: EqualNat (1+1) 2
 twoEqualsTwo = SameNat 2
 
@@ -413,6 +414,48 @@ data Equal': a -> b -> Type where
    -- using x in place of a showing shadowing wraning
     Refl': Equal' a a
 
-twoPlusTwoBad: (Equal' (3+2) 2)
+twoPlusTwoBad: (Equal' (2+2) 4)
 twoPlusTwoBad = Refl'
 
+notTrue: Equal' (2+3) 6 -> Void 
+notTrue Refl' impossible
+
+checkEqNat: (m: Nat) -> (n: Nat) -> Maybe (Equal' m n)
+checkEqNat Z  Z = Just Refl'
+checkEqNat (S k)  Z = Nothing
+checkEqNat Z  (S k) = Nothing
+-- Just adding this `(checkEqNat k j)` won't work, 
+-- becuase we want (S k) = (S j), but `(checkEqNat k j)` gives k = j
+checkEqNat (S k)  (S j) = case (checkEqNat k j) of
+                               Nothing => Nothing
+                               -- in left Refl' is Refl' x, in right it is Refl' (S x)
+                               (Just Refl') => Just Refl'
+
+
+
+-- About with?
+-- ** is for dependent types, where one value depends on other
+filter': ( a -> Bool) -> Vect n a -> (p ** Vect p a)
+filter' p [] = (_ ** [])
+filter' p (x :: xs) with (filter' p xs)
+    filter' p (x :: xs) | (_ ** xs') = if (p x) then (_ ** x :: xs') else (_ ** xs')
+
+
+data Parity: Nat -> Type where
+    Even: {n: _} -> Parity (n + n)
+    Odd: {n: _} -> Parity (S (n + n))
+
+-- understand rewrite better
+helpEven: (j : Nat) -> Parity (S (plus j (S j))) -> Parity (S (S (plus j j)))
+helpEven j x = rewrite plusSuccRightSucc j j in x
+
+
+helpOdd: (j : Nat) -> Parity (S (S (plus j (S j)))) -> Parity (S (S (S (plus j j))))
+helpOdd j x = rewrite plusSuccRightSucc j j in x
+
+parity: (n: Nat) -> Parity n
+parity Z = Even {n=Z}
+parity (S Z) = Odd {n=Z}
+parity (S (S k)) with (parity k)
+    parity (S (S (j + j)))| Even = let result = Even {n= S j} in helpEven j result
+    parity (S (S (S (j + j)))) | Odd = let result = Odd {n= S j} in helpOdd j result
