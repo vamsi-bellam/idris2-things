@@ -441,21 +441,9 @@ filter' p (x :: xs) with (filter' p xs)
     filter' p (x :: xs) | (_ ** xs') = if (p x) then (_ ** x :: xs') else (_ ** xs')
 
 
-data Parity: Nat -> Type where
-    Even: {n: _} -> Parity (n + n)
-    Odd: {n: _} -> Parity (S (n + n))
-
--- understand rewrite better
-helpEven: (j : Nat) -> Parity (S (plus j (S j))) -> Parity (S (S (plus j j)))
-helpEven j x = rewrite plusSuccRightSucc j j in x
 
 
-helpOdd: (j : Nat) -> Parity (S (S (plus j (S j)))) -> Parity (S (S (S (plus j j))))
-helpOdd j x = rewrite plusSuccRightSucc j j in x
 
-parity: (n: Nat) -> Parity n
-parity Z = Even {n=Z}
-parity (S Z) = Odd {n=Z}
-parity (S (S k)) with (parity k)
-    parity (S (S (j + j)))| Even = let result = Even {n= S j} in helpEven j result
-    parity (S (S (S (j + j)))) | Odd = let result = Odd {n= S j} in helpOdd j result
+plusReducesR : (n:Nat) -> plus n Z = n
+plusReducesR 0 = Refl
+plusReducesR (S k) = cong S (plusReducesR k)
