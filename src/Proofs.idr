@@ -283,11 +283,13 @@ tail [] impossible
 
 -- even though this is not infinite recursion, compiler thinking it is..
 -- If covering is removed, it gives above error
-covering
-largest: Ord a => (as: List a) -> (0 _: NotNil as) => a
-largest (h :: []) = h
-largest (h :: x :: xs) = if h > x then largest (h :: xs) else largest (x :: xs)
 
+largest: Ord a => (0 gas : Nat) -> (as: List a) -> {0 pf' : gas = length as} -> {auto pf: NotNil as} -> a
+largest _ [] {pf = _} impossible
+largest (S _) (h :: []) = h
+largest (S (S n)) (h :: x :: xs) = if h > x then largest (S n) (h :: xs) else largest (S n) (x :: xs)
+
+largest' as = largest (length as) as
 
 covering
 smallest: Ord a => (as: List a) -> (0 _: NotNil as) => a

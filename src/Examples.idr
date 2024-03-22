@@ -378,7 +378,7 @@ vlen xs = 2
 vlen': (n : Nat) -> Vect n a -> Nat
 vlen' n xs = n
 
--- Using curly braces means, you can stating that n (that appears in Vect) needed for usage at runtime
+-- Using curly braces means, you are stating that n (that appears in Vect) needed for usage at runtime
 vlen'': {n : Nat} -> Vect n a -> Nat 
 vlen'' xs = n
 
