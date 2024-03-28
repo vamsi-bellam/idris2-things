@@ -59,3 +59,29 @@ pf B = Yes Refl
 --                                                         Yes prf => Yes (ConsAU (pf) prf)
 --                                                         No contr => ?ll
                                  
+
+
+cast': Int -> Char 
+cast' i = cast i
+
+tes: Char -> Int 
+
+
+-- Rewrite ruless
+
+addZeroRight : (n : Nat) -> n + 0 = n
+addZeroRight 0 = Refl
+addZeroRight (S k) = cong S (addZeroRight k)
+
+replaceVect : Vect (n + 0) a -> Vect n a
+replaceVect xs = replace {p = \k => Vect k a} (addZeroRight n) xs
+
+rewriteVect : Vect (n + 0) a -> Vect n a
+rewriteVect as = rewrite sym (addZeroRight n) in as
+
+rightZero' :  List (Vect n Nat)
+           -> List (Vect (n + 0) Nat)
+           -> List (Vect n Nat)
+rightZero' = (++)
+
+
