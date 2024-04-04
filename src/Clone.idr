@@ -1,133 +1,93 @@
 module Clone 
 import Data.Vect
+import Data.Fin
+
+data UpperChars = A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | 
+                  Q | R | S | T | U | V | W | X | Y | Z
+
+get : UpperChars  -> Nat
+get A = 0
+get B = 1
+get C = 2
+get D = 3
+get E = 4
+get F = 5
+get G = 6
+get H = 7
+get I = 8
+get J = 9
+get K = 10
+get L = 11
+get M = 12
+get N = 13
+get O = 14
+get P = 15
+get Q = 16
+get R = 17
+get S = 18
+get T = 19
+get U = 20
+get V = 21
+get W = 22
+get X = 23
+get Y = 24
+get Z = 25
 
 
 
-isUpperCase: (c: Char) -> Bool 
-isUpperCase c = if (c == toUpper c) then True else False
 
-
-data Uppercase : Char -> Type where
-  MkUppercase : (c : Char) -> (isUpper c = True) -> Uppercase c
-
--- Function to get the ASCII code of an uppercase character
-indexUppercase : (c : Char) -> Uppercase c -> Int
-indexUppercase c (MkUppercase _ p) = cast c
-
--- data OnlyUpper: (c: Char) -> Type where 
---     OU: (c: Char) -> OnlyUpper (toUpper c)
-
--- ex: OnlyUpper 'A'
--- ex = OU 'A'
-
--- ind: (c: ) -> (0 _: OnlyUpper c) => Int 
--- ind c = cast c
-
-{-
- * [index c] is the 0-based index of [c] in the alphabet.
- * requires: [c] is an uppercase letter in A..Z 
--}
-index: (c: Char) -> {auto p: (isUpperCase c) = True} -> Int 
-index c = cast c - cast 'A'
-
-data ValidString: Vect 1 Char -> Type where 
-    VString: (cs : List Char) -> (p: 2 = 2) -> (case cs of 
-                                                    h => ValidString ?k)
-
-
-
--- ex: ValidString ('A' :: ['B'])
--- ex = VString ['A', 'B']
-
--- isValidString: (s: String) -> Dec (ValidString (unpack s))
--- isValidString (x :: (y :: [])) = Yes (VString [x, y])
-
-data AllUppercase : List Char -> Type where
-  NilAU : AllUppercase []
-  ConsAU : {x : Char} -> {xs : List Char} -> isUpperCase x = True -> AllUppercase xs -> AllUppercase (x :: xs)
-
--- Not working
-makeSpecMap': (p: List Char) -> { auto fa : AllUppercase p} -> Vect (length p) (Int, Char)
-makeSpecMap' [] {fa = NilAU } = []
-makeSpecMap' (x :: xs) {fa = ConsAU a b} = (index x, x) :: makeSpecMap' xs
-
-AllUppercaseDec : (xs : List Char) -> Dec (AllUppercase xs)
-AllUppercaseDec [] = Yes NilAU
-AllUppercaseDec (x :: xs) = case x of
-                                 "A" => ?jh
-                                 case_val => ?AllUppercaseDec_rhs_1
-
--- unpack_length : (s : String) -> length s = length (unpack s)
-
--- makeSpecMap': (p: List Char) -> Vect (length p) (Int, Char)
--- makeSpecMap' [] = []
--- makeSpecMap' (x :: xs) = (index x, x) :: makeSpecMap' xs
-
--- makeSpecMap: (s: String) ->  Vect (length s) (Int, Char)
--- makeSpecMap s = let chars = unpack s in rewrite unpack_length s in (makeSpecMap' chars)
-
-mapi: (f: Int -> a -> b) -> List a -> List b 
+mapi: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Vect n b 
 mapi f ls = mapiaux f ls 0 where 
-            mapiaux: (f: Int -> a -> b) -> List a -> Int -> List b 
-            mapiaux f [] i = []
-            mapiaux f (x :: xs) i = (f i x) :: (mapiaux f xs (i+1))
+                    mapiaux: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Nat -> Vect n b 
+                    mapiaux f [] k = []
+                    mapiaux f (x :: xs) k = f k x :: mapiaux f xs (S k)
+                  
 
+makeSpecMap: (wiring: Vect 26 UpperChars)-> Vect 26 (Nat, Nat)
+makeSpecMap wiring = mapi (\i, x => (i, get x)) wiring
 
-getVal: Ord a => (key: a) -> (List (a, b)) -> Maybe b
-getVal key [] = Nothing
-getVal key ((k, v) :: xs) = if key == k then Just v else getVal key xs
+at: Fin n -> Vect n (Nat, Nat) -> Nat 
+at FZ ((_, x) :: xs) = x
+at (FS k) (y :: xs) = at k xs
 
-makeSpecMap: (s: String) ->  List (Int, Int)
-makeSpecMap s = mapi (\i, x  => (i, index x)) $ (unpack s)
+-- Write own version of mod
 
+data Mode = RightToLeft | LeftToRight
 
--- Error
--- data Elem : (elem : a) -> (as : List (a, b)) -> Type where
---   Here  : Elem x ((x , _) :: xs)
---   There : Elem x xs -> Elem x (y :: xs)
-         
--- getVal: (key: a) -> (mp: List (a, b)) -> (0 prf: Elem key mp) => b
--- getVal key [] impossible
--- getVal key (x :: xs) {prf = Here} = ?getVal_rhs_1 
-
-
-
-
-{- [map_r_to_l wiring top_letter input_pos] is the left-hand output position
- * at which current would appear when current enters at right-hand input
- * position [input_pos] to a rotor whose wiring specification is given by
- * [wiring].  The orientation of the rotor is given by [top_letter],
- * which is the top letter appearing to the operator in the rotor's
- * present orientation.
- * requires:
- *  - [wiring] is a valid wiring specification.
- *  - [top_letter] is in 'A'..'Z'
- *  - [input_pos] is in 0..25
- -}
-
--- containsEveryUppercase : String -> Bool
--- containsEveryUppercase str =
---   let allUppercase = unpack "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
---       checkUppercase : List Char -> Bool
---       checkUppercase [] = True
---       checkUppercase (c :: cs) = elem c allUppercase && checkUppercase cs
---   in length str == 26 && checkUppercase (unpack str)
-
--- data Wiring: (s: Maybe String) -> Type where 
---     MkWiring: (w: String) -> Wiring (if (containsEveryUppercase w) then (Just w) else Nothing)
-
-mapRightToLeft : String -> Char -> Int -> Maybe Int
-mapRightToLeft wiring topLetter inputPos = 
+mapFrom : Mode -> (wiring: Vect 26 UpperChars) -> (topLetter: UpperChars) -> Nat -> Nat
+mapFrom mode wiring topLetter inputPos = 
         let specificationMap = makeSpecMap wiring
-            topLetterIndex = index topLetter
-            forwardOffset: Int -> Int -> Int
+            topLetterIndex = get topLetter
+            forwardOffset: Nat -> Nat -> Nat
             forwardOffset offset input = mod (offset + input)  26
             inputContact = forwardOffset topLetterIndex inputPos
-            backWardOffset: Int -> Int -> Int
-            backWardOffset offset input = mod (26 - offset + input) 26
-        in case (getVal inputContact specificationMap) of 
-                Just val => Just (backWardOffset topLetterIndex val)
-                Nothing => Nothing
+            backWardOffset:  Nat -> Nat -> Nat
+            backWardOffset offset input = mod (minus (26 + input) offset) 26
+            outputContact: Mode -> Nat
+            outputContact mode = case mode of 
+                                      RightToLeft => at 1 specificationMap
+                                      LeftToRight => at inputContact $ map (\(a, b) => (b, a)) specificationMap
+        in backWardOffset topLetterIndex $ outputContact mode
 
 
+mapRefl: (wiring: Vect 26 UpperChars) -> (pos: Nat) -> {auto pf: pos < 26 = True} -> Nat
+mapRefl wiring pos = at pos $ makeSpecMap wiring
+
+isValidChar: Char -> Bool
+isValidChar c = toUpper c >= 'A' && toUpper c <= 'Z' 
+
+
+isValidList: List Char -> Bool
+isValidList [] = True
+isValidList (x :: xs) = (isValidChar x) && (isValidList xs)
+
+program: String -> Char -> Int -> Maybe Int
+program cs topLetter pos = 
+          let cis = unpack cs in 
+          if (isValidList cis && isValidChar topLetter) then
+            let ws = (allUppercase cis)
+                (topLetter **  p) = (uppercaseEncoderWithProof topLetter)
+                ks = (mapFrom LeftToRight  (getCharListFromAllUppercase ws) {uppercaseList = allUppercaseList ws} topLetter pos)
+            in ks
+          else Nothing
 

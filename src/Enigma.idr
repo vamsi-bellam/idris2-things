@@ -1,39 +1,49 @@
 module Enigma 
 import Data.Vect
 
+
 isUppercase:  Char -> Bool 
 isUppercase c = if (c == toUpper c) then True else False
 
+uppercase : Char -> Type
+uppercase c = c = toUpper c
 
-uppercaseEncoderWithProof : (u : Char) -> (c : Char ** (isUppercase c = True))
+-- Uninhabited (uppercase 'A') where
+--   uninhabited Refl impossible
+
+-- Try to comstruct data type data IUSc : Char -> Type 
+                                  -- IA -> IUSC a
+
+uppercaseEncoderWithProof : (u : Char) -> Dec (uppercase u)
 uppercaseEncoderWithProof u =
   case u of
-    'A' => ('A' ** Refl)
-    'B' => ('B' ** Refl)
-    'C' => ('C' ** Refl)
-    'D' => ('D' ** Refl)
-    'E' => ('E' ** Refl)
-    'F' => ('F' ** Refl)
-    'G' => ('G' ** Refl)
-    'H' => ('H' ** Refl)
-    'I' => ('I' ** Refl)
-    'J' => ('J' ** Refl)
-    'K' => ('K' ** Refl)
-    'L' => ('L' ** Refl)
-    'M' => ('M' ** Refl)
-    'N' => ('N' ** Refl)
-    'O' => ('O' ** Refl)
-    'P' => ('P' ** Refl)
-    'Q' => ('Q' ** Refl)
-    'R' => ('R' ** Refl)
-    'S' => ('S' ** Refl)
-    'T' => ('T' ** Refl)
-    'U' => ('U' ** Refl)
-    'V' => ('V' ** Refl)
-    'W' => ('W' ** Refl)
-    'X' => ('X' ** Refl)
-    'Y' => ('Y' ** Refl)
-    _ => ('Z' ** Refl)
+    'A' => Yes Refl
+    'B' => Yes Refl
+    'C' => Yes Refl
+    'D' => Yes Refl
+    'E' => Yes Refl
+    'F' => Yes Refl
+    'G' => Yes Refl
+    'H' => Yes Refl
+    'I' => Yes Refl
+    'J' => Yes Refl
+    'K' => Yes Refl
+    'L' => Yes Refl
+    'M' => Yes Refl
+    'N' => Yes Refl
+    'O' => Yes Refl
+    'P' => Yes Refl
+    'Q' => Yes Refl
+    'R' => Yes Refl
+    'S' => Yes Refl
+    'T' => Yes Refl
+    'U' => Yes Refl
+    'V' => Yes Refl
+    'W' => Yes Refl
+    'X' => Yes Refl
+    'Y' => Yes Refl
+    'Z' => Yes Refl
+    t => No ?kk
 
 
 allUppercase: (l: List Char) -> List ((c : Char ** ((isUppercase c) = True)) ) 
