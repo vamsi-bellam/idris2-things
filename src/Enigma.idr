@@ -1,139 +1,158 @@
 module Enigma 
 import Data.Vect
+import Data.Fin
+-- TODO: Figure out why import Data.Vect.Sort not working from stdlib
+-- For now, copied the module to local from official lib folder
+import Sort
 
 
-isUppercase:  Char -> Bool 
-isUppercase c = if (c == toUpper c) then True else False
 
-uppercase : Char -> Type
-uppercase c = c = toUpper c
+data UpperChars = A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | 
+                  Q | R | S | T | U | V | W | X | Y | Z
 
--- Uninhabited (uppercase 'A') where
---   uninhabited Refl impossible
-
--- Try to comstruct data type data IUSc : Char -> Type 
-                                  -- IA -> IUSC a
-
-uppercaseEncoderWithProof : (u : Char) -> Dec (uppercase u)
-uppercaseEncoderWithProof u =
-  case u of
-    'A' => Yes Refl
-    'B' => Yes Refl
-    'C' => Yes Refl
-    'D' => Yes Refl
-    'E' => Yes Refl
-    'F' => Yes Refl
-    'G' => Yes Refl
-    'H' => Yes Refl
-    'I' => Yes Refl
-    'J' => Yes Refl
-    'K' => Yes Refl
-    'L' => Yes Refl
-    'M' => Yes Refl
-    'N' => Yes Refl
-    'O' => Yes Refl
-    'P' => Yes Refl
-    'Q' => Yes Refl
-    'R' => Yes Refl
-    'S' => Yes Refl
-    'T' => Yes Refl
-    'U' => Yes Refl
-    'V' => Yes Refl
-    'W' => Yes Refl
-    'X' => Yes Refl
-    'Y' => Yes Refl
-    'Z' => Yes Refl
-    t => No ?kk
+get : UpperChars  -> Nat
+get A = 0
+get B = 1
+get C = 2
+get D = 3
+get E = 4
+get F = 5
+get G = 6
+get H = 7
+get I = 8
+get J = 9
+get K = 10
+get L = 11
+get M = 12
+get N = 13
+get O = 14
+get P = 15
+get Q = 16
+get R = 17
+get S = 18
+get T = 19
+get U = 20
+get V = 21
+get W = 22
+get X = 23
+get Y = 24
+get Z = 25
 
 
-allUppercase: (l: List Char) -> List ((c : Char ** ((isUppercase c) = True)) ) 
-allUppercase [] = []
-allUppercase (x :: xs) = (uppercaseEncoderWithProof x) :: allUppercase xs
-
-getCharListFromAllUppercase: List ((c : Char ** ((isUppercase c) = True)) ) -> List Char 
-getCharListFromAllUppercase [] = []
-getCharListFromAllUppercase (((fst ** snd)) :: xs) = fst :: (getCharListFromAllUppercase xs)
 
 
-data AllUppercase : List Char -> Type where
-  NilAU : AllUppercase []
-  ConsAU : {x : Char} -> {xs : List Char} -> isUppercase x = True -> AllUppercase xs -> AllUppercase (x :: xs)
-
-  
-allUppercaseList: (l: List ((c : Char ** (isUppercase c = True))) ) -> (AllUppercase (getCharListFromAllUppercase l))
-allUppercaseList [] = NilAU
-allUppercaseList (((fst ** snd)) :: xs) = ConsAU snd (allUppercaseList xs)
-
-
--- Program starts -- 
-
--- isBetween: (x: Int) -> ((x >= 0 && x <= 26) = True)
--- isBetween x = ?isBetween_rhs
-
--- index: (c: Char) -> {auto p: (isUppercase c) = True} -> (x: Int ** ((x >= 0 && x <= 26) = True)) 
--- index c = let t = cast c - cast 'A' in (t ** ?lk)
-
-index: (c: Char) -> {auto p: (isUppercase c) = True} -> Int
-index c = cast c - cast 'A' 
-
-charToIndex:  (l: List Char) -> {auto uppercaseList: AllUppercase l} -> List Int
-charToIndex [] = []
-charToIndex (x :: xs) {uppercaseList = ConsAU a b} = index x :: (charToIndex xs)
-
-getVal: Ord a => (key: a) -> (List (a, b)) -> Maybe b
-getVal key [] = Nothing
-getVal key ((k, v) :: xs) = if key == k then Just v else getVal key xs
-
-mapi: (f: Int -> a -> b) -> List a -> List b 
+mapi: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Vect n b 
 mapi f ls = mapiaux f ls 0 where 
-            mapiaux: (f: Int -> a -> b) -> List a -> Int -> List b 
-            mapiaux f [] i = []
-            mapiaux f (x :: xs) i = (f i x) :: (mapiaux f xs (i+1))
+                    mapiaux: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Nat -> Vect n b 
+                    mapiaux f [] k = []
+                    mapiaux f (x :: xs) k = f k x :: mapiaux f xs (S k)
+                  
 
-makeSpecMap: (wiring: List Char) -> {auto uppercaseList: AllUppercase wiring} -> List (Int, Int)
-makeSpecMap wiring = mapi (\i, x  => (i, x)) $ charToIndex wiring
+WiringSpec: Type
+WiringSpec = Vect 26 (Nat, Nat)
 
+makeSpecMap: (wiring: Vect 26 UpperChars) -> WiringSpec
+makeSpecMap wiring = mapi (\i, x => (i, get x)) wiring
+
+revSpecMap: WiringSpec -> WiringSpec
+revSpecMap wiringSpec = (sortBy (\(x1, _), (x2, _) => compare x1 x2) (map (\(a, b) => (b, a)) wiringSpec))
+
+
+at: Fin n -> Vect n (Nat, Nat) -> Nat 
+at FZ ((_, x) :: xs) = x
+at (FS k) (y :: xs) = at k xs
+
+
+
+mod'': (n: Nat) -> (m: Nat) -> {auto prf: GT m 0} -> (r: Nat ** LT r m)
+mod'' n m = case (isLT n m) of 
+                  Yes p => (n ** p)
+                  No _ => (mod'' (minus n m) m)
+                                      
 data Mode = RightToLeft | LeftToRight
 
-
-mapFrom : Mode -> (wiring: List Char) -> {auto uppercaseList: AllUppercase wiring} -> 
-          (topLetter: Char) -> {auto uppercase: isUppercase topLetter = True} -> Int -> Maybe Int
+mapFrom : Mode -> (wiring: Vect 26 UpperChars) -> (topLetter: UpperChars) -> Nat -> Nat
 mapFrom mode wiring topLetter inputPos = 
         let specificationMap = makeSpecMap wiring
-            topLetterIndex = index topLetter
-            forwardOffset: Int -> Int -> Int
-            forwardOffset offset input = mod (offset + input)  26
+            topLetterIndex = get topLetter
+            forwardOffset: Nat -> Nat -> (r: Nat ** LT r 26) 
+            forwardOffset offset input = mod'' (offset + input)  26
             inputContact = forwardOffset topLetterIndex inputPos
-            backWardOffset: Int -> Int -> Int
-            backWardOffset offset input = mod (26 - offset + input) 26
-            outputContact: Mode -> Maybe Int
+            backWardOffset:  Nat -> Nat -> Nat
+            backWardOffset offset input = mod (minus (26 + input) offset) 26
+            outputContact: Mode -> Nat
             outputContact mode = case mode of 
-                                 RightToLeft => getVal inputContact specificationMap
-                                 LeftToRight => getVal inputContact $ map (\(a, b) => (b, a)) specificationMap
-        in case outputContact mode of 
-                Just v => Just $ backWardOffset topLetterIndex v
-                Nothing => Nothing
-
-mapRefl: (wiring: List Char) -> {auto uppercaseList: AllUppercase wiring} -> Int -> Maybe Int
-mapRefl wiring i = getVal i $ makeSpecMap wiring
-
-
-
-isValidChar: Char -> Bool
-isValidChar c = toUpper c >= 'A' && toUpper c <= 'Z' 
+                                      RightToLeft => at (natToFinLT (fst inputContact) 
+                                                        {prf= (snd inputContact)}) 
+                                                        specificationMap
+                                      LeftToRight => at (natToFinLT (fst inputContact) 
+                                                        {prf= (snd inputContact)}) 
+                                                        (revSpecMap specificationMap)
+                                                        
+        in backWardOffset topLetterIndex $ outputContact mode
 
 
-isValidList: List Char -> Bool
-isValidList [] = True
-isValidList (x :: xs) = (isValidChar x) && (isValidList xs)
+mapRefl: (wiring: Vect 26 UpperChars) -> (pos: Nat) -> {auto prf: LT pos 26} -> Nat
+mapRefl wiring pos = at (natToFinLT pos) $ makeSpecMap wiring
 
-program: String -> Char -> Int -> Maybe Int
+
+charToUpperChars : Char -> Maybe UpperChars
+charToUpperChars 'A' = Just A
+charToUpperChars 'B' = Just B
+charToUpperChars 'C' = Just C
+charToUpperChars 'D' = Just D
+charToUpperChars 'E' = Just E
+charToUpperChars 'F' = Just F
+charToUpperChars 'G' = Just G
+charToUpperChars 'H' = Just H
+charToUpperChars 'I' = Just I
+charToUpperChars 'J' = Just J
+charToUpperChars 'K' = Just K
+charToUpperChars 'L' = Just L
+charToUpperChars 'M' = Just M
+charToUpperChars 'N' = Just N
+charToUpperChars 'O' = Just O
+charToUpperChars 'P' = Just P
+charToUpperChars 'Q' = Just Q
+charToUpperChars 'R' = Just R
+charToUpperChars 'S' = Just S
+charToUpperChars 'T' = Just T
+charToUpperChars 'U' = Just U
+charToUpperChars 'V' = Just V
+charToUpperChars 'W' = Just W
+charToUpperChars 'X' = Just X
+charToUpperChars 'Y' = Just Y
+charToUpperChars 'Z' = Just Z
+charToUpperChars _   = Nothing
+
+
+mapToUpperChars: Vect n Char -> Vect n (Maybe UpperChars)
+mapToUpperChars [] = []
+mapToUpperChars (x :: xs) = (charToUpperChars x) :: (mapToUpperChars xs)
+
+toVectUpperChars: Vect n (Maybe UpperChars) -> Maybe (Vect n UpperChars)
+toVectUpperChars [] = Just []
+toVectUpperChars (x :: xs) = case (x, toVectUpperChars xs) of 
+                              (Just v, Just vv) => Just (v :: vv)
+                              _ => Nothing
+
+toVectChar: List Char -> Maybe (Vect 26 Char)
+toVectChar (a::b::c::d::e::f::g::h::i::j::k::l::m::n::o::p::q::r::s::t::u::v::w::x::y::z::[]) 
+        = Just [a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
+toVectChar _ = Nothing
+
+toUpperChars: (l: List Char) -> Maybe (Vect 26 UpperChars)
+toUpperChars cs = case (toVectChar cs) of 
+                        Just v => (toVectUpperChars (mapToUpperChars v))
+                        Nothing => Nothing
+
+program: String -> Char -> Integer -> Maybe Nat
 program cs topLetter pos = 
-          let cis = unpack cs in 
-          if (isValidList cis && isValidChar topLetter) then
-            let ws = (allUppercase cis)
-                (topLetter **  p) = (uppercaseEncoderWithProof topLetter)
-                ks = (mapFrom LeftToRight  (getCharListFromAllUppercase ws) {uppercaseList = allUppercaseList ws} topLetter pos)
-            in ks
-          else Nothing
+          case (toUpperChars (unpack cs), charToUpperChars topLetter) of 
+                (Just wire, Just tl) => Just (mapFrom RightToLeft wire tl (integerToNat pos))
+                _ => Nothing
 
+main: IO ()
+main = putStrLn ("Welcome to E Machine!!")
+
+-- Read STDLIB of NAT, FIn and some others to understand proofs and style

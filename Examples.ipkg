@@ -19,7 +19,7 @@ authors = "vamsibellam"
 modules = Examples
 
 -- main file (i.e. file to load at REPL)
-main = Examples
+main = Enigma
 
 -- name of executable
 executable = examples
