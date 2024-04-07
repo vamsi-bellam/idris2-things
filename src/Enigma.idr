@@ -8,7 +8,37 @@ import Sort
 
 
 data UpperChars = A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | 
-                  Q | R | S | T | U | V | W | X | Y | Z
+                Q | R | S | T | U | V | W | X | Y | Z
+
+Eq UpperChars where
+  A == A = True
+  B == B = True
+  C == C = True
+  D == D = True
+  E == E = True
+  F == F = True
+  G == G = True
+  H == H = True
+  I == I = True
+  J == J = True
+  K == K = True
+  L == L = True
+  M == M = True
+  N == N = True
+  O == O = True
+  P == P = True
+  Q == Q = True
+  R == R = True
+  S == S = True
+  T == T = True
+  U == U = True
+  V == V = True
+  W == W = True
+  X == X = True
+  Y == Y = True
+  Z == Z = True
+  _ == _ = False
+
 
 get : UpperChars  -> Nat
 get A = 0
@@ -41,59 +71,89 @@ get Z = 25
 
 
 
-mapi: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Vect n b 
+mapi : {0 n : Nat} -> (f : Nat -> a -> b) -> Vect n a -> Vect n b 
 mapi f ls = mapiaux f ls 0 where 
-                    mapiaux: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Nat -> Vect n b 
-                    mapiaux f [] k = []
-                    mapiaux f (x :: xs) k = f k x :: mapiaux f xs (S k)
+              mapiaux: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Nat -> Vect n b 
+              mapiaux f [] k = []
+              mapiaux f (x :: xs) k = f k x :: mapiaux f xs (S k)
                   
 
-WiringSpec: Type
+WiringSpec : Type
 WiringSpec = Vect 26 (Nat, Nat)
 
-makeSpecMap: (wiring: Vect 26 UpperChars) -> WiringSpec
+makeSpecMap : (wiring: Vect 26 UpperChars) -> WiringSpec
 makeSpecMap wiring = mapi (\i, x => (i, get x)) wiring
 
-revSpecMap: WiringSpec -> WiringSpec
-revSpecMap wiringSpec = (sortBy (\(x1, _), (x2, _) => compare x1 x2) (map (\(a, b) => (b, a)) wiringSpec))
+revSpecMap : WiringSpec -> WiringSpec
+revSpecMap wiringSpec = (sortBy (\(x1, _), (x2, _) => compare x1 x2) 
+                          (map (\(a, b) => (b, a)) wiringSpec))
 
 
-at: Fin n -> Vect n (Nat, Nat) -> Nat 
+at : Fin n -> Vect n (Nat, Nat) -> Nat 
 at FZ ((_, x) :: xs) = x
 at (FS k) (y :: xs) = at k xs
 
 
 
-mod'': (n: Nat) -> (m: Nat) -> {auto prf: GT m 0} -> (r: Nat ** LT r m)
+mod'' : (n : Nat) -> (m : Nat) -> {auto prf : GT m 0} -> (r : Nat ** LT r m)
 mod'' n m = case (isLT n m) of 
-                  Yes p => (n ** p)
-                  No _ => (mod'' (minus n m) m)
+              Yes p => (n ** p)
+              No _ => (mod'' (minus n m) m)
                                       
 data Mode = RightToLeft | LeftToRight
 
-mapFrom : Mode -> (wiring: Vect 26 UpperChars) -> (topLetter: UpperChars) -> Nat -> Nat
+mapFrom : Mode -> (wiring: Vect 26 UpperChars) -> (topLetter: UpperChars) -> 
+          Nat -> Nat
 mapFrom mode wiring topLetter inputPos = 
-        let specificationMap = makeSpecMap wiring
-            topLetterIndex = get topLetter
-            forwardOffset: Nat -> Nat -> (r: Nat ** LT r 26) 
-            forwardOffset offset input = mod'' (offset + input)  26
-            inputContact = forwardOffset topLetterIndex inputPos
-            backWardOffset:  Nat -> Nat -> Nat
-            backWardOffset offset input = mod (minus (26 + input) offset) 26
-            outputContact: Mode -> Nat
-            outputContact mode = case mode of 
-                                      RightToLeft => at (natToFinLT (fst inputContact) 
-                                                        {prf= (snd inputContact)}) 
-                                                        specificationMap
-                                      LeftToRight => at (natToFinLT (fst inputContact) 
-                                                        {prf= (snd inputContact)}) 
-                                                        (revSpecMap specificationMap)
+  let specificationMap = makeSpecMap wiring
+      topLetterIndex = get topLetter
+      forwardOffset: Nat -> Nat -> (r: Nat ** LT r 26) 
+      forwardOffset offset input = mod'' (offset + input)  26
+      inputContact = forwardOffset topLetterIndex inputPos
+      backWardOffset:  Nat -> Nat -> Nat
+      backWardOffset offset input = mod (minus (26 + input) offset) 26
+      outputContact: Mode -> Nat
+      outputContact mode = case mode of 
+                            RightToLeft => at (natToFinLT (fst inputContact) 
+                                              {prf= (snd inputContact)}) 
+                                              specificationMap
+                            LeftToRight => at (natToFinLT (fst inputContact) 
+                                              {prf= (snd inputContact)}) 
+                                              (revSpecMap specificationMap)
                                                         
-        in backWardOffset topLetterIndex $ outputContact mode
+  in backWardOffset topLetterIndex $ outputContact mode
 
 
-mapRefl: (wiring: Vect 26 UpperChars) -> (pos: Nat) -> {auto prf: LT pos 26} -> Nat
+mapRefl : (wiring : Vect 26 UpperChars) -> (pos : Nat) -> {auto prf : LT pos 26} 
+          -> Nat
 mapRefl wiring pos = at (natToFinLT pos) $ makeSpecMap wiring
+
+mapPlug : Vect n (UpperChars, UpperChars) -> {auto prf : LTE n 13} -> 
+          (l: UpperChars) -> UpperChars
+mapPlug [] l = l
+mapPlug  {n = S x} ((a, b) :: xs) l {prf = LTESucc k} =
+  if l == a then b 
+  else if l == b then a 
+  else (mapPlug xs l {prf = lteSuccRight k})
+
+record Rotor where 
+  constructor MkRotor
+  wiring : WiringSpec
+  turnover : UpperChars
+
+record OrientedRotor where 
+  constructor MkOrientedRotor
+  rotor : Rotor 
+  topLetter : UpperChars
+
+record Config where 
+  constructor MkConfig
+  refl : WiringSpec
+  rotors : List OrientedRotor
+  plugBoard : List (UpperChars, UpperChars)
+
+cipherChar : Config -> UpperChars -> UpperChars
+cipherChar (MkConfig refl rotors plugBoard) y = ?cipherChar_rhs_0
 
 
 charToUpperChars : Char -> Maybe UpperChars
@@ -126,33 +186,33 @@ charToUpperChars 'Z' = Just Z
 charToUpperChars _   = Nothing
 
 
-mapToUpperChars: Vect n Char -> Vect n (Maybe UpperChars)
+mapToUpperChars : Vect n Char -> Vect n (Maybe UpperChars)
 mapToUpperChars [] = []
 mapToUpperChars (x :: xs) = (charToUpperChars x) :: (mapToUpperChars xs)
 
-toVectUpperChars: Vect n (Maybe UpperChars) -> Maybe (Vect n UpperChars)
+toVectUpperChars : Vect n (Maybe UpperChars) -> Maybe (Vect n UpperChars)
 toVectUpperChars [] = Just []
 toVectUpperChars (x :: xs) = case (x, toVectUpperChars xs) of 
-                              (Just v, Just vv) => Just (v :: vv)
-                              _ => Nothing
+                                (Just v, Just vv) => Just (v :: vv)
+                                _ => Nothing
 
-toVectChar: List Char -> Maybe (Vect 26 Char)
+toVectChar : List Char -> Maybe (Vect 26 Char)
 toVectChar (a::b::c::d::e::f::g::h::i::j::k::l::m::n::o::p::q::r::s::t::u::v::w::x::y::z::[]) 
-        = Just [a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
+  = Just [a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
 toVectChar _ = Nothing
 
-toUpperChars: (l: List Char) -> Maybe (Vect 26 UpperChars)
+toUpperChars : (l : List Char) -> Maybe (Vect 26 UpperChars)
 toUpperChars cs = case (toVectChar cs) of 
-                        Just v => (toVectUpperChars (mapToUpperChars v))
-                        Nothing => Nothing
+                    Just v => (toVectUpperChars (mapToUpperChars v))
+                    Nothing => Nothing
 
-program: String -> Char -> Integer -> Maybe Nat
+program : String -> Char -> Integer -> Maybe Nat
 program cs topLetter pos = 
           case (toUpperChars (unpack cs), charToUpperChars topLetter) of 
-                (Just wire, Just tl) => Just (mapFrom RightToLeft wire tl (integerToNat pos))
-                _ => Nothing
+            (Just wire, Just tl) => Just (mapFrom RightToLeft wire tl (integerToNat pos))
+            _ => Nothing
 
-main: IO ()
+main : IO ()
 main = putStrLn ("Welcome to E Machine!!")
 
 -- Read STDLIB of NAT, FIn and some others to understand proofs and style
