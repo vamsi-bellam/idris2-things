@@ -1,74 +1,12 @@
-module Enigma 
+module Enigma
+
 import Data.Vect
 import Data.Fin
 -- TODO: Figure out why import Data.Vect.Sort not working from stdlib
 -- For now, copied the module to local from official lib folder
 import Sort
 
-
-
-data UpperChars = A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | 
-                Q | R | S | T | U | V | W | X | Y | Z
-
-Eq UpperChars where
-  A == A = True
-  B == B = True
-  C == C = True
-  D == D = True
-  E == E = True
-  F == F = True
-  G == G = True
-  H == H = True
-  I == I = True
-  J == J = True
-  K == K = True
-  L == L = True
-  M == M = True
-  N == N = True
-  O == O = True
-  P == P = True
-  Q == Q = True
-  R == R = True
-  S == S = True
-  T == T = True
-  U == U = True
-  V == V = True
-  W == W = True
-  X == X = True
-  Y == Y = True
-  Z == Z = True
-  _ == _ = False
-
-
-get : UpperChars  -> Nat
-get A = 0
-get B = 1
-get C = 2
-get D = 3
-get E = 4
-get F = 5
-get G = 6
-get H = 7
-get I = 8
-get J = 9
-get K = 10
-get L = 11
-get M = 12
-get N = 13
-get O = 14
-get P = 15
-get Q = 16
-get R = 17
-get S = 18
-get T = 19
-get U = 20
-get V = 21
-get W = 22
-get X = 23
-get Y = 24
-get Z = 25
-
-
+import UpperChars
 
 
 mapi : {0 n : Nat} -> (f : Nat -> a -> b) -> Vect n a -> Vect n b 
@@ -82,7 +20,7 @@ WiringSpec : Type
 WiringSpec = Vect 26 (Nat, Nat)
 
 makeSpecMap : (wiring: Vect 26 UpperChars) -> WiringSpec
-makeSpecMap wiring = mapi (\i, x => (i, get x)) wiring
+makeSpecMap wiring = mapi (\i, x => (i, toIndex x)) wiring
 
 revSpecMap : WiringSpec -> WiringSpec
 revSpecMap wiringSpec = (sortBy (\(x1, _), (x2, _) => compare x1 x2) 
@@ -106,12 +44,12 @@ mapFrom : Mode -> (wiring: Vect 26 UpperChars) -> (topLetter: UpperChars) ->
           Nat -> Nat
 mapFrom mode wiring topLetter inputPos = 
   let specificationMap = makeSpecMap wiring
-      topLetterIndex = get topLetter
+      topLetterIndex = toIndex topLetter
       forwardOffset: Nat -> Nat -> (r: Nat ** LT r 26) 
       forwardOffset offset input = mod'' (offset + input)  26
       inputContact = forwardOffset topLetterIndex inputPos
       backWardOffset:  Nat -> Nat -> Nat
-      backWardOffset offset input = mod (minus (26 + input) offset) 26
+      backWardOffset offset input = fst (mod'' (minus (26 + input) offset) 26)
       outputContact: Mode -> Nat
       outputContact mode = case mode of 
                             RightToLeft => at (natToFinLT (fst inputContact) 
@@ -128,17 +66,20 @@ mapRefl : (wiring : Vect 26 UpperChars) -> (pos : Nat) -> {auto prf : LT pos 26}
           -> Nat
 mapRefl wiring pos = at (natToFinLT pos) $ makeSpecMap wiring
 
-mapPlug : Vect n (UpperChars, UpperChars) -> {auto prf : LTE n 13} -> 
-          (l: UpperChars) -> UpperChars
+mapPlug : Vect n (Nat, Nat) -> {auto prf : LTE n 13} -> 
+          (l: Nat) -> Nat
 mapPlug [] l = l
 mapPlug  {n = S x} ((a, b) :: xs) l {prf = LTESucc k} =
   if l == a then b 
   else if l == b then a 
   else (mapPlug xs l {prf = lteSuccRight k})
 
+Wiring: Type
+Wiring = Vect 26 UpperChars
+
 record Rotor where 
   constructor MkRotor
-  wiring : WiringSpec
+  wiring : Wiring
   turnover : UpperChars
 
 record OrientedRotor where 
@@ -146,44 +87,28 @@ record OrientedRotor where
   rotor : Rotor 
   topLetter : UpperChars
 
-record Config where 
+record Config n where 
   constructor MkConfig
-  refl : WiringSpec
+  refl : Wiring
   rotors : List OrientedRotor
-  plugBoard : List (UpperChars, UpperChars)
-
-cipherChar : Config -> UpperChars -> UpperChars
-cipherChar (MkConfig refl rotors plugBoard) y = ?cipherChar_rhs_0
+  plugBoard : Vect n (UpperChars, UpperChars)
 
 
-charToUpperChars : Char -> Maybe UpperChars
-charToUpperChars 'A' = Just A
-charToUpperChars 'B' = Just B
-charToUpperChars 'C' = Just C
-charToUpperChars 'D' = Just D
-charToUpperChars 'E' = Just E
-charToUpperChars 'F' = Just F
-charToUpperChars 'G' = Just G
-charToUpperChars 'H' = Just H
-charToUpperChars 'I' = Just I
-charToUpperChars 'J' = Just J
-charToUpperChars 'K' = Just K
-charToUpperChars 'L' = Just L
-charToUpperChars 'M' = Just M
-charToUpperChars 'N' = Just N
-charToUpperChars 'O' = Just O
-charToUpperChars 'P' = Just P
-charToUpperChars 'Q' = Just Q
-charToUpperChars 'R' = Just R
-charToUpperChars 'S' = Just S
-charToUpperChars 'T' = Just T
-charToUpperChars 'U' = Just U
-charToUpperChars 'V' = Just V
-charToUpperChars 'W' = Just W
-charToUpperChars 'X' = Just X
-charToUpperChars 'Y' = Just Y
-charToUpperChars 'Z' = Just Z
-charToUpperChars _   = Nothing
+mapRotorsFrom: Mode -> List OrientedRotor -> Nat -> Nat 
+mapRotorsFrom mode rotors inputPos = 
+  case mode of 
+    RightToLeft => foldr (\(MkOrientedRotor rotor topLetter), 
+      acc => (mapFrom RightToLeft rotor.wiring topLetter acc)) inputPos rotors
+    LeftToRight => foldl (\acc, (MkOrientedRotor rotor topLetter) => 
+      (mapFrom LeftToRight rotor.wiring topLetter acc)) inputPos rotors
+  
+
+cipherChar : {n: Nat} -> Config n -> {auto prf : LTE n 13} -> UpperChars -> UpperChars
+cipherChar (MkConfig refl rotors plugBoard) ch = 
+  let plugs = map (\(a, b) => (toIndex a , toIndex b)) plugBoard in 
+    indexToUpperChars (mapPlug plugs
+        (mapRotorsFrom LeftToRight rotors 
+          (mapRefl refl (mapRotorsFrom RightToLeft rotors (mapPlug plugs (toIndex ch))))))
 
 
 mapToUpperChars : Vect n Char -> Vect n (Maybe UpperChars)
@@ -214,5 +139,3 @@ program cs topLetter pos =
 
 main : IO ()
 main = putStrLn ("Welcome to E Machine!!")
-
--- Read STDLIB of NAT, FIn and some others to understand proofs and style
