@@ -1,4 +1,3 @@
--- module src.Examples is giving error, how to name nested modules
 module Examples
 import Data.Fin
 import Data.Vect
