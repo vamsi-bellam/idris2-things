@@ -2,9 +2,9 @@ module Enigma
 
 import Data.Vect
 import Data.Fin
--- TODO: Figure out why import Data.Vect.Sort not working from stdlib
--- For now, copied the module to local from official lib folder
-import Sort
+
+-- this is from contrib package, so need to add it to depends in .ipkg file or use -p contrib during compile time
+import Data.Vect.Sort
 
 import UpperChars
 
@@ -38,6 +38,15 @@ mod'' n m = case (isLT n m) of
               Yes p => (n ** p)
               No _ => (mod'' (minus n m) m)
                                       
+-- mod' : (n : Nat) -> (m : Nat) -> {0 auto prf : GT m 0} -> Nat
+
+-- mod'_correct : (n : Nat) -> (m : Nat) -> {0 auto prf : GT m 0} -> LT (mod' n m) m
+
+-- mod : (n : Nat) -> (m : Nat) -> {0 auto prf : GT m 0} -> Nat
+-- mod n m = fst mod''
+
+-- mod_correct = snd mod''
+
 data Mode = RightToLeft | LeftToRight
 
 mapFrom : Mode -> (wiring: Vect 26 UpperChars) -> (topLetter: UpperChars) -> 
@@ -121,6 +130,7 @@ toVectUpperChars (x :: xs) = case (x, toVectUpperChars xs) of
                                 (Just v, Just vv) => Just (v :: vv)
                                 _ => Nothing
 
+-- use fromList of vect, and prove Length lis = 26 using boolean comparision
 toVectChar : List Char -> Maybe (Vect 26 Char)
 toVectChar (a::b::c::d::e::f::g::h::i::j::k::l::m::n::o::p::q::r::s::t::u::v::w::x::y::z::[]) 
   = Just [a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
@@ -139,3 +149,5 @@ program cs topLetter pos =
 
 main : IO ()
 main = putStrLn ("Welcome to E Machine!!")
+
+-- at end try te cipher char property proof

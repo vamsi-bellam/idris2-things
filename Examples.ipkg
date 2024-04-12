@@ -13,13 +13,13 @@ authors = "vamsibellam"
 -- langversion
 
 -- packages to add to search path
--- depends =
+depends = contrib
 
 -- modules to install
-modules = Examples
+-- modules =
 
 -- main file (i.e. file to load at REPL)
-main = Enigma
+main = Main
 
 -- name of executable
 executable = examples
