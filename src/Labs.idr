@@ -1,6 +1,8 @@
 module Labs
 import Data.List
 import Data.Colist
+import Data.String
+import System.File
 
 -- Lab1 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_01.pdf
 
@@ -252,3 +254,76 @@ implementation Num Conat where
   (+) = add 
   (*) = mulC 
   fromInteger = coN . fromInteger
+
+-- Lab7 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_07.pdf
+
+concat_strings : IO String
+concat_strings = putStrLn "Please enter the first sentence :" >>= 
+                 \_ => getLine >>= 
+                 \s1 => putStrLn "Please enter the first sentence :" >>= 
+                 \_ => getLine >>= 
+                 \s2 => pure (s1 ++ " " ++ s2)
+
+-- do syntanx version
+concat_strings' : IO String
+concat_strings' = do 
+                    putStrLn "Please enter the first sentence :"
+                    s1 <- getLine 
+                    putStrLn "Please enter the first sentence :" 
+                    s2 <- getLine 
+                    pure (s1 ++ " " ++  s2)
+      
+
+add_after : Integer -> IO ( Maybe Integer )
+add_after x = do 
+                putStrLn "Please enter a number :"
+                x1 <- getLine
+                case (parseInteger x1) of 
+                  Just n => pure (Just (x + n))
+                  Nothing => pure Nothing
+                
+count_words : IO Unit
+count_words = do 
+                putStrLn "Enter some text :"
+                text <- getLine
+                putStrLn ("You typed " ++ cast(length(words text)) ++ " words")
+
+get_lines : IO ( List String )
+get_lines = do 
+              putStrLn "Please enter a sentence :"
+              s <- getLine 
+              if s == "done" then pure [] else 
+                do 
+                  rest <- get_lines
+                  pure (s :: rest)
+
+get_only_ints : IO ( List Integer )
+get_only_ints = do 
+                  putStrLn "Please enter an integer or \"done\":"
+                  s <- getLine 
+                  if s == "done" then pure [] else 
+                    do 
+                      case (parseInteger s) of 
+                        Just num =>
+                          do 
+                            rest <- get_only_ints 
+                            pure (num :: rest)
+                        Nothing => get_only_ints
+
+
+-- compile in the repl using :c <executable_name> <function_name> and then 
+-- go to build/exec folder and create txt file and run ./<executable_name>
+dictate : IO ()
+dictate = do 
+            sentences <- get_lines
+            putStrLn "Enter the location :"
+            loc <- getLine
+            file <- (openFile loc ReadWrite)
+            case file of 
+              Left err => putStrLn "Failed to write to file ."
+              Right hand => do 
+                              conts <- writeFile loc (unwords sentences)
+                              closeFile hand
+                              case conts of 
+                                Left err => putStrLn "Failed to write to file ."
+                                Right res => pure res
