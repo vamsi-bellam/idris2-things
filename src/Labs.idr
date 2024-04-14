@@ -1,4 +1,6 @@
 module Labs
+import Data.List
+import Data.Colist
 
 -- Lab1 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_01.pdf
 
@@ -112,20 +114,141 @@ transform f 0 (x :: xs) = f x :: xs
 transform f (S k) (x :: xs) = x :: (transform f k xs)
 
 
+
 ignore_lowerCaseVowels : String -> String
 ignore_lowerCaseVowels str = 
   let chs = (unpack str) 
-      f_chs = List.filter (\x => not (elem x ['a', 'e', 'i', 'o', 'u'])) chs
+      -- Need this explicit type def to avoid amiguity with colist
+      vowels : List Char
+      vowels = ['a', 'e', 'i', 'o', 'u']
+      f_chs = List.filter (\x => not (elem x vowels)) chs
   in 
   (foldl (\acc, ele => acc ++ (cast ele)) "" f_chs)
 
--- mult' : Nat -> Nat -> Nat
--- mult' m = foldl ?n ()
 
--- n_to_lu' : Nat -> List Unit 
--- n_to_lu' n = foldl (\acc, ele => () :: acc) [] n
+-- (a : t) and (t -> t) are constructor replacing terms
+fold_nat : (a : t) -> (t -> t) -> Nat -> t
+fold_nat a f Z = a
+fold_nat a f (S k) = f (fold_nat a f k)
+
+mult' : Nat -> Nat -> Nat
+mult' m n = (fold_nat Z (\acc => plus n acc) m)
+
+n_to_lu' : Nat -> List Unit 
+n_to_lu' n = fold_nat [] (\acc => () :: acc) n
 
 lu_to_n' : List Unit -> Nat
 lu_to_n' l = foldl (\acc, ele => S acc) Z l
 
--- continue after..
+-- clever one, I couldn't get it.. :( (got solution from lecture5 video)
+fold_bool : t -> t -> Bool -> t
+fold_bool a f False = f
+fold_bool a f True = a
+
+-- Lab5 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_05.pdf
+
+Show Shape where 
+  show (Circle radius) = "Circle with radius " ++ show radius
+  show (Rectangle width height) = "Rectangle with width " ++ show width ++ 
+                                  " and height " ++ show height
+  show (IsosTriangle base height) = "Triangle with base "  ++ show base ++ 
+                                    " and height "++ show height
+
+implementation [ setwise ] Eq a => Eq ( List a ) where
+  x == y = (all (\n => (elem n y)) x) &&
+           (all (\n => (elem n x)) y)                     
+
+
+-- There are three ways to write interface
+-- Just with name, or with interface keyword or implementation keyword?
+-- Clarity: interface for declaring and implementation for implementing a declared interface
+
+-- Take a look at PreOrder problem later
+
+
+data AExpr : Num n => Type -> Type where
+  V : n -> AExpr n
+  Plus : AExpr n -> AExpr n -> AExpr n
+  Times : AExpr n -> AExpr n -> AExpr n
+
+eval : Num n => AExpr n -> n
+eval (V x) = x
+eval (Plus x y) = eval x + eval y
+eval (Times x y) = eval x * eval y
+
+implementation Num n => Eq n => Eq (AExpr n) where
+  (==) x y = eval x == eval y
+
+implementation Num a => Ord a => Eq (AExpr a) => Ord (AExpr a) where 
+  x < y = eval x < eval y
+
+implementation Cast Integer Bool where 
+  cast 0 = False 
+  cast _ = True
+
+-- This is a lossy cast as True casts to 1 but it could be any +ve number
+implementation Cast Bool Integer where 
+  cast False = 0 
+  cast True = 1
+
+-- Lab6 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_06.pdf
+
+-- It implicity converting to ot via type def
+
+coL : List a -> Colist a
+coL [] = []
+coL (x :: xs) = x :: coL xs
+
+uncoL : Colist a -> List a
+uncoL [] = []
+uncoL (x :: y) = x :: (uncoL y)
+-- can be also written as below, but Delay is implcitly infereed in left and 
+-- added in right while constructing colist
+-- uncoL (x :: (Delay xs)) = x :: (uncoL xs)
+
+data  Conat : Type  where
+	Zero  :  Conat
+	Succ  :  Inf Conat -> Conat
+
+length : Colist a -> Conat
+length [] = Zero
+length (x :: y) = Succ (length y)
+
+filter : (a -> Bool) -> Colist a -> Colist a
+filter f [] = []
+filter f (x :: xs) = if f x then x :: (filter f xs) else filter f xs
+
+unroll : (a -> a) -> a -> Stream a
+unroll f x = let v = f x in v :: unroll f v
+
+zipSL : (a -> b -> c) -> Stream a -> List b -> List c
+zipSL f _ [] = []
+zipSL f (x :: xs) (y :: ys) = f x y :: zipSL f xs ys
+
+
+-- coN, uncoN and add defs taken from lecture video to implement mulC
+coN  :  Nat -> Conat
+coN Z  =  Zero
+coN (S n)  =  Succ (coN n)
+
+uncoN  :  Conat -> Nat
+uncoN Zero  =  Z
+uncoN (Succ n)  =  S (uncoN n)
+
+add : Conat -> Conat -> Conat
+add Zero n  =  n
+add (Succ m) n  =  Succ (add m n)
+
+mulC : Conat -> Conat -> Conat
+mulC Zero Zero = Zero
+mulC Zero (Succ x) = Zero
+mulC (Succ x) Zero = Zero
+mulC (Succ x) (Succ y) = add (Succ y) (mulC x (Succ y))
+
+infinity : Conat
+infinity = Succ infinity
+
+implementation Num Conat where 
+  (+) = add 
+  (*) = mulC 
+  fromInteger = coN . fromInteger
