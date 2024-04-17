@@ -40,25 +40,27 @@ mod'' n m = case (isLT n m) of
                                       
 -- mod' : (n : Nat) -> (m : Nat) -> {0 auto prf : GT m 0} -> Nat
 
--- mod'_correct : (n : Nat) -> (m : Nat) -> {0 auto prf : GT m 0} -> LT (mod' n m) m
+-- mod'_correct : (n : Nat) -> (m : Nat) -> {auto prf : GT m 0} -> LT (mod'' n m) m
+-- mod'_correct 0 0 = ?mod'_correct_rhs_2
+-- mod'_correct 0 (S k) = ?mod'_correct_rhs_3
+-- mod'_correct (S k) m = ?mod'_correct_rhs_1
 
--- mod : (n : Nat) -> (m : Nat) -> {0 auto prf : GT m 0} -> Nat
--- mod n m = fst mod''
+modulo : (n : Nat) -> (m : Nat) -> {auto prf : GT m 0} -> Nat
+modulo n m = fst (mod'' n m)
 
--- mod_correct = snd mod''
 
 data Mode = RightToLeft | LeftToRight
 
 mapFrom : Mode -> (wiring: Vect 26 UpperChars) -> (topLetter: UpperChars) -> 
-          Nat -> Nat
+          Nat -> (res : Nat ** LT res 26)
 mapFrom mode wiring topLetter inputPos = 
   let specificationMap = makeSpecMap wiring
       topLetterIndex = toIndex topLetter
-      forwardOffset: Nat -> Nat -> (r: Nat ** LT r 26) 
+      forwardOffset: Nat -> Nat -> (r : Nat ** LT r 26) 
       forwardOffset offset input = mod'' (offset + input)  26
       inputContact = forwardOffset topLetterIndex inputPos
-      backWardOffset:  Nat -> Nat -> Nat
-      backWardOffset offset input = fst (mod'' (minus (26 + input) offset) 26)
+      backWardOffset:  Nat -> Nat -> (r : Nat ** LT r 26)
+      backWardOffset offset input = (mod'' (minus (26 + input) offset) 26)
       outputContact: Mode -> Nat
       outputContact mode = case mode of 
                             RightToLeft => at (natToFinLT (fst inputContact) 
@@ -103,21 +105,52 @@ record Config n where
   plugBoard : Vect n (UpperChars, UpperChars)
 
 
-mapRotorsFrom: Mode -> List OrientedRotor -> Nat -> Nat 
+mapRotorsFrom : Mode -> List OrientedRotor -> (inputPos: Nat) -> (r : Nat ** LT r 26) 
 mapRotorsFrom mode rotors inputPos = 
   case mode of 
     RightToLeft => foldr (\(MkOrientedRotor rotor topLetter), 
-      acc => (mapFrom RightToLeft rotor.wiring topLetter acc)) inputPos rotors
+      acc => (mapFrom RightToLeft rotor.wiring topLetter (fst acc))) (mod'' inputPos 26) rotors
     LeftToRight => foldl (\acc, (MkOrientedRotor rotor topLetter) => 
-      (mapFrom LeftToRight rotor.wiring topLetter acc)) inputPos rotors
+      (mapFrom LeftToRight rotor.wiring topLetter (fst acc))) (mod'' inputPos 26) rotors
   
 
-cipherChar : {n: Nat} -> Config n -> {auto prf : LTE n 13} -> UpperChars -> UpperChars
+cipherChar : {n : Nat} -> Config n -> {auto prf : LTE n 13} -> UpperChars -> UpperChars
 cipherChar (MkConfig refl rotors plugBoard) ch = 
-  let plugs = map (\(a, b) => (toIndex a , toIndex b)) plugBoard in 
-    indexToUpperChars (mapPlug plugs
-        (mapRotorsFrom LeftToRight rotors 
-          (mapRefl refl (mapRotorsFrom RightToLeft rotors (mapPlug plugs (toIndex ch))))))
+  let plugs = map (\(a, b) => (toIndex a , toIndex b)) plugBoard 
+      mprl = mapRotorsFrom RightToLeft rotors (mapPlug plugs (toIndex ch))
+      mprefl = (mapRefl refl (fst mprl) {prf = snd mprl})
+      mplr = mapRotorsFrom LeftToRight rotors mprefl
+      mplg = mapPlug plugs (fst mplr)
+    in 
+    indexToUpperChars mplg
+
+step : {n : Nat} -> Config n -> Config n
+step config =  { rotors := (transformRotors (reverse config.rotors) [] True)} 
+                config where 
+
+               stepRotor : OrientedRotor -> OrientedRotor 
+               stepRotor rtr = { topLetter := nextChar rtr.topLetter } rtr
+               
+               transformRotors : List OrientedRotor -> List OrientedRotor -> 
+                                  Bool -> List OrientedRotor
+               transformRotors rotors acc step_current_rotor =
+                  case rotors of 
+                    [] => acc
+                    [ hd ] => if step_current_rotor then stepRotor hd :: acc 
+                              else hd :: acc
+                    hd :: tl =>
+                      if hd.rotor.turnover == hd.topLetter then
+                        transformRotors tl (stepRotor hd :: acc) True
+                      else if step_current_rotor then
+                        transformRotors tl (stepRotor hd :: acc) False
+                      else transformRotors tl (hd :: acc) False
+                      
+cipher : {n : Nat} -> Config n -> {auto prf : LTE n 13} -> List UpperChars 
+                      -> List UpperChars
+cipher config chars = reverse $ fst $ foldl 
+                      (\(acc, config), ch => 
+                        ((cipherChar config ch) :: acc, step config)) 
+                      ([], config) chars
 
 
 mapToUpperChars : Vect n Char -> Vect n (Maybe UpperChars)
@@ -144,10 +177,74 @@ toUpperChars cs = case (toVectChar cs) of
 program : String -> Char -> Integer -> Maybe Nat
 program cs topLetter pos = 
           case (toUpperChars (unpack cs), charToUpperChars topLetter) of 
-            (Just wire, Just tl) => Just (mapFrom RightToLeft wire tl (integerToNat pos))
+            (Just wire, Just tl) => Just (fst (mapFrom RightToLeft wire tl (integerToNat pos)))
             _ => Nothing
 
 main : IO ()
 main = putStrLn ("Welcome to E Machine!!")
+
+rotorIWiring : Wiring
+rotorIWiring = [E,K,M,F,L,G,D,Q,V,Z,N,T,O,W,Y,H,X,U,S,P,A,I,B,R,C,J]
+
+rotorIIWiring : Wiring 
+rotorIIWiring = [A,J,D,K,S,I,R,U,X,B,L,H,W,T,M,C,Q,G,Z,N,P,Y,F,V,O,E]
+
+rotorIIIWiring : Wiring
+rotorIIIWiring = [B,D,F,H,J,L,C,P,R,T,X,V,Z,N,Y,E,I,W,G,A,K,M,U,S,Q,O]
+
+reflectorB : Wiring 
+reflectorB = [Y,R,U,H,Q,S,L,D,P,X,N,G,O,K,M,I,E,B,F,Z,C,W,V,J,A,T]
+
+
+rotorI : Rotor
+rotorI = (MkRotor rotorIWiring Q)
+
+rotorII : Rotor
+rotorII = (MkRotor rotorIIWiring E)
+
+rotorIII : Rotor
+rotorIII = (MkRotor rotorIIIWiring V)
+
+rotors : List OrientedRotor 
+rotors = [(MkOrientedRotor rotorI A), (MkOrientedRotor rotorII A), 
+          (MkOrientedRotor rotorIII A)]
+
+
+config : Config 0
+config = (MkConfig reflectorB rotors [])
+
+actualCipherChars : List (UpperChars, UpperChars)
+actualCipherChars = 
+  [
+    (A, U),
+    (B, E),
+    (C, J),
+    (D, O),
+    (E, B),
+    (F, T),
+    (G, P),
+    (H, Z),
+    (I, W),
+    (J, C),
+    (K, N),
+    (L, S),
+    (M, R),
+    (N, K),
+    (O, D),
+    (P, G),
+    (Q, V),
+    (R, M),
+    (S, L),
+    (T, F),
+    (U, A),
+    (V, Q),
+    (W, I),
+    (X, Y),
+    (Y, X),
+    (Z, H)
+  ]
+
+
+
 
 -- at end try te cipher char property proof

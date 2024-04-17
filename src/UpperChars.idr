@@ -1,37 +1,37 @@
 module UpperChars
 
-export
+public export
 data UpperChars = A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | 
                 Q | R | S | T | U | V | W | X | Y | Z
--- export
--- Eq UpperChars where
---   A == A = True
---   B == B = True
---   C == C = True
---   D == D = True
---   E == E = True
---   F == F = True
---   G == G = True
---   H == H = True
---   I == I = True
---   J == J = True
---   K == K = True
---   L == L = True
---   M == M = True
---   N == N = True
---   O == O = True
---   P == P = True
---   Q == Q = True
---   R == R = True
---   S == S = True
---   T == T = True
---   U == U = True
---   V == V = True
---   W == W = True
---   X == X = True
---   Y == Y = True
---   Z == Z = True
---   _ == _ = False
+export
+Eq UpperChars where
+  A == A = True
+  B == B = True
+  C == C = True
+  D == D = True
+  E == E = True
+  F == F = True
+  G == G = True
+  H == H = True
+  I == I = True
+  J == J = True
+  K == K = True
+  L == L = True
+  M == M = True
+  N == N = True
+  O == O = True
+  P == P = True
+  Q == Q = True
+  R == R = True
+  S == S = True
+  T == T = True
+  U == U = True
+  V == V = True
+  W == W = True
+  X == X = True
+  Y == Y = True
+  Z == Z = True
+  _ == _ = False
 
 export
 toIndex : UpperChars  -> Nat
@@ -63,7 +63,35 @@ toIndex Y = 24
 toIndex Z = 25
 
 export
-partial
+nextChar : UpperChars  -> UpperChars
+nextChar A = B
+nextChar B = C
+nextChar C = D
+nextChar D = E
+nextChar E = F
+nextChar F = G
+nextChar G = H
+nextChar H = I
+nextChar I = J
+nextChar J = K
+nextChar K = L
+nextChar L = M
+nextChar M = N
+nextChar N = O
+nextChar O = P
+nextChar P = Q
+nextChar Q = R
+nextChar R = S
+nextChar S = T
+nextChar T = U
+nextChar U = V
+nextChar V = W
+nextChar W = X
+nextChar X = Y
+nextChar Y = Z
+nextChar Z = A
+
+export
 indexToUpperChars: (n: Nat) -> UpperChars
 indexToUpperChars 0 = A
 indexToUpperChars 1 = B
@@ -91,6 +119,8 @@ indexToUpperChars 22 = W
 indexToUpperChars 23 = X
 indexToUpperChars 24 = Y
 indexToUpperChars 25 = Z
+-- TODO: Remove this possibility
+indexToUpperChars _ = Z
 
 export
 charToUpperChars : Char -> Maybe UpperChars
