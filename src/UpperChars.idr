@@ -92,6 +92,7 @@ nextChar Y = Z
 nextChar Z = A
 
 export
+-- indexToUpperChars: (n: Nat) -> {auto prf : LT n 26} -> UpperChars
 indexToUpperChars: (n: Nat) -> UpperChars
 indexToUpperChars 0 = A
 indexToUpperChars 1 = B

@@ -26,8 +26,8 @@ average' i j = (i + j) / 2
 xor : Bool -> Bool -> Bool
 xor True True = False 
 xor False False = False 
-xor False True = False 
-xor True False = False 
+xor False True = True 
+xor True False = True 
 
 
 data Prob = Definitely | Likely | Doubtful | Impossible
@@ -327,3 +327,54 @@ dictate = do
                               case conts of 
                                 Left err => putStrLn "Failed to write to file ."
                                 Right res => pure res
+
+-- Lab8 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_08.pdf
+
+
+implementation Semigroup Bool where
+  (<+>) = xor
+
+implementation Monoid Bool where
+  neutral = False
+
+
+-- comp : (b -> c) -> (a -> b) -> a -> c
+-- comp f g x = f (g x)
+
+implementation Semigroup (a -> a) where
+  f <+> g = f . g
+
+
+
+implementation Monoid (a -> a) where 
+  neutral = (\x => x)
+
+multiply : Monoid a => Nat -> a -> a
+multiply 0 x = neutral
+multiply (S Z) x = x 
+multiply (S k) x = x <+> (multiply k x)
+
+consolidate : List (Maybe a) -> Maybe (List a)
+consolidate [] = Just []
+consolidate (x :: xs) = case (x, consolidate xs) of 
+                          (Just x, Just y) => Just (x :: y)
+                          (_, _) => Nothing
+
+consolidate' : List (Maybe a) -> Maybe (List a)
+consolidate' [] = Just []
+consolidate' (Nothing :: xs) = Nothing
+consolidate' ((Just x) :: xs) = map (x ::) (consolidate' xs)
+
+map1 : Applicative t => (a -> b) -> t a -> t b
+map1 f x = pure f <*> x
+
+map0 : Applicative t => b -> t b
+map0 f = pure f
+
+map3 : Applicative t => (a -> b -> c -> d) -> t a -> t b -> t c -> t d
+map3 f x y z = pure f <*> x <*> y <*> z 
+
+join_list : List (List a) -> List a
+join_list [] = []
+join_list (x :: xs) = x ++ (join_list xs) 
+

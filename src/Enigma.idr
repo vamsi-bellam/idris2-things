@@ -5,13 +5,16 @@ import Data.Fin
 
 -- this is from contrib package, so need to add it to depends in .ipkg file or use -p contrib during compile time
 import Data.Vect.Sort
+import Decidable.Equality
 
 import UpperChars
 
 
+
 mapi : {0 n : Nat} -> (f : Nat -> a -> b) -> Vect n a -> Vect n b 
 mapi f ls = mapiaux f ls 0 where 
-              mapiaux: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Nat -> Vect n b 
+              mapiaux: {0 n: Nat} -> (f: Nat -> a -> b) -> Vect n a -> Nat 
+                        -> Vect n b 
               mapiaux f [] k = []
               mapiaux f (x :: xs) k = f k x :: mapiaux f xs (S k)
                   
@@ -23,15 +26,15 @@ makeSpecMap : (wiring: Vect 26 UpperChars) -> WiringSpec
 makeSpecMap wiring = mapi (\i, x => (i, toIndex x)) wiring
 
 revSpecMap : WiringSpec -> WiringSpec
-revSpecMap wiringSpec = (sortBy (\(x1, _), (x2, _) => compare x1 x2) 
-                          (map (\(a, b) => (b, a)) wiringSpec))
+revSpecMap wiringSpec = sortBy (\(x1, _), (x2, _) => compare x1 x2) 
+                          $ map (\(a, b) => (b, a)) wiringSpec
 
+
+-- TODO: Try adding proof that result Nat is < 26
 
 at : Fin n -> Vect n (Nat, Nat) -> Nat 
 at FZ ((_, x) :: xs) = x
 at (FS k) (y :: xs) = at k xs
-
-
 
 mod'' : (n : Nat) -> (m : Nat) -> {auto prf : GT m 0} -> (r : Nat ** LT r m)
 mod'' n m = case (isLT n m) of 
@@ -105,6 +108,7 @@ record Config n where
   plugBoard : Vect n (UpperChars, UpperChars)
 
 
+
 mapRotorsFrom : Mode -> List OrientedRotor -> (inputPos: Nat) -> (r : Nat ** LT r 26) 
 mapRotorsFrom mode rotors inputPos = 
   case mode of 
@@ -117,33 +121,31 @@ mapRotorsFrom mode rotors inputPos =
 cipherChar : {n : Nat} -> Config n -> {auto prf : LTE n 13} -> UpperChars -> UpperChars
 cipherChar (MkConfig refl rotors plugBoard) ch = 
   let plugs = map (\(a, b) => (toIndex a , toIndex b)) plugBoard 
-      mprl = mapRotorsFrom RightToLeft rotors (mapPlug plugs (toIndex ch))
-      mprefl = (mapRefl refl (fst mprl) {prf = snd mprl})
-      mplr = mapRotorsFrom LeftToRight rotors mprefl
-      mplg = mapPlug plugs (fst mplr)
+      (char ** charProof) = mapRotorsFrom RightToLeft rotors $ mapPlug plugs $ toIndex ch
+      (char ** _) = mapRotorsFrom LeftToRight rotors $ mapRefl refl char {prf = charProof}
     in 
-    indexToUpperChars mplg
+    indexToUpperChars $ mapPlug plugs char
 
 step : {n : Nat} -> Config n -> Config n
-step config =  { rotors := (transformRotors (reverse config.rotors) [] True)} 
+step config =  { rotors := transformRotors (reverse config.rotors) [] True } 
                 config where 
 
-               stepRotor : OrientedRotor -> OrientedRotor 
-               stepRotor rtr = { topLetter := nextChar rtr.topLetter } rtr
-               
-               transformRotors : List OrientedRotor -> List OrientedRotor -> 
-                                  Bool -> List OrientedRotor
-               transformRotors rotors acc step_current_rotor =
-                  case rotors of 
-                    [] => acc
-                    [ hd ] => if step_current_rotor then stepRotor hd :: acc 
-                              else hd :: acc
-                    hd :: tl =>
-                      if hd.rotor.turnover == hd.topLetter then
-                        transformRotors tl (stepRotor hd :: acc) True
-                      else if step_current_rotor then
-                        transformRotors tl (stepRotor hd :: acc) False
-                      else transformRotors tl (hd :: acc) False
+                stepRotor : OrientedRotor -> OrientedRotor 
+                stepRotor rtr = { topLetter := nextChar rtr.topLetter } rtr
+                
+                transformRotors : List OrientedRotor -> List OrientedRotor -> 
+                                    Bool -> List OrientedRotor
+                transformRotors rotors acc step_current_rotor =
+                    case rotors of 
+                      [] => acc
+                      [ hd ] => if step_current_rotor then stepRotor hd :: acc 
+                                else hd :: acc
+                      hd :: tl =>
+                        if hd.rotor.turnover == hd.topLetter then
+                          transformRotors tl (stepRotor hd :: acc) True
+                        else if step_current_rotor then
+                          transformRotors tl (stepRotor hd :: acc) False
+                        else transformRotors tl (hd :: acc) False
                       
 cipher : {n : Nat} -> Config n -> {auto prf : LTE n 13} -> List UpperChars 
                       -> List UpperChars
@@ -163,11 +165,21 @@ toVectUpperChars (x :: xs) = case (x, toVectUpperChars xs) of
                                 (Just v, Just vv) => Just (v :: vv)
                                 _ => Nothing
 
+
 -- use fromList of vect, and prove Length lis = 26 using boolean comparision
+-- Look into DecEq
+
+
+
+
 toVectChar : List Char -> Maybe (Vect 26 Char)
-toVectChar (a::b::c::d::e::f::g::h::i::j::k::l::m::n::o::p::q::r::s::t::u::v::w::x::y::z::[]) 
-  = Just [a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
-toVectChar _ = Nothing
+toVectChar cs = case decEq (length cs) 26 of 
+                  Yes p => Just ?lkl
+                  No _ =>  Nothing
+
+-- toVectChar (a::b::c::d::e::f::g::h::i::j::k::l::m::n::o::p::q::r::s::t::u::v::w::x::y::z::[]) 
+--   = Just [a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
+-- toVectChar _ = Nothing
 
 toUpperChars : (l : List Char) -> Maybe (Vect 26 UpperChars)
 toUpperChars cs = case (toVectChar cs) of 
@@ -182,6 +194,9 @@ program cs topLetter pos =
 
 main : IO ()
 main = putStrLn ("Welcome to E Machine!!")
+
+
+-- Some testing 
 
 rotorIWiring : Wiring
 rotorIWiring = [E,K,M,F,L,G,D,Q,V,Z,N,T,O,W,Y,H,X,U,S,P,A,I,B,R,C,J]
