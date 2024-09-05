@@ -3,7 +3,8 @@ import Data.List
 import Data.Colist
 import Data.String
 import System.File
-
+import Data.Fin 
+import Data.Vect
 -- Lab1 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_01.pdf
 
 average : Integer -> Integer -> Integer
@@ -167,6 +168,11 @@ implementation [ setwise ] Eq a => Eq ( List a ) where
 
 -- Take a look at PreOrder problem later
 
+interface Preorder' a where 
+  f : a -> a -> Bool
+
+implementation [ divides ] Preorder' Integer where 
+  f n m = mod n m == 0
 
 data AExpr : Num n => Type -> Type where
   V : n -> AExpr n
@@ -375,6 +381,42 @@ map3 : Applicative t => (a -> b -> c -> d) -> t a -> t b -> t c -> t d
 map3 f x y z = pure f <*> x <*> y <*> z 
 
 join_list : List (List a) -> List a
-join_list [] = []
-join_list (x :: xs) = x ++ (join_list xs) 
+join_list ls = join ls
 
+-- Lab9 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_09.pdf 
+
+bool_2_fin : Bool -> Fin 2
+bool_2_fin False = FZ
+bool_2_fin True = FS FZ
+
+fin_2_bool : Fin 2 -> Bool 
+fin_2_bool FZ = False
+fin_2_bool (FS FZ) = True
+
+map_vect : (a -> b) -> Vect n a -> Vect n b 
+map_vect f [] = []
+map_vect f (x :: xs) = f x :: map_vect f xs
+
+as_top : (n : Nat) -> Fin (S n)
+as_top 0 = FZ
+as_top (S k) = FS (as_top k)
+
+
+data Tuple : Vect n a -> Type where 
+  Nil : Tuple []
+  (::) : t -> Tuple ts -> Tuple (t :: ts)
+
+two_tuple : Pair a b -> Tuple [a, b]
+two_tuple x = [fst x, snd x]
+
+ind_pair : Pair a b -> DPair a (\_ => b)
+ind_pair x = (fst x ** snd x)
+
+
+forget_length : Vect n a -> List a 
+forget_length [] = []
+forget_length (x :: xs) = x :: forget_length xs
+
+learn_length : (xs : List a) -> Vect (length xs) a
+learn_length [] = []
+learn_length (x :: xs) = x :: learn_length xs
