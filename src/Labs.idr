@@ -420,3 +420,145 @@ forget_length (x :: xs) = x :: forget_length xs
 learn_length : (xs : List a) -> Vect (length xs) a
 learn_length [] = []
 learn_length (x :: xs) = x :: learn_length xs
+
+-- Lab10 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_10.pdf 
+
+ary_op  :  Nat -> Type -> Type
+ary_op Z a  =  a
+ary_op (S n) a  =  a -> ary_op n a
+
+majority3 : 3 `ary_op` Bool 
+majority3 x y z = if x then y || z else y && z
+
+list_majority : List Bool -> Bool
+list_majority xs = list_majority' 0 xs where 
+  list_majority' : Int -> List Bool -> Bool 
+  list_majority' acc [] = acc >= 0
+  list_majority' acc (x :: xs) = if x then list_majority' (acc + 1) xs 
+                                else list_majority' (acc - 1) xs
+
+
+infixr 6 >->
+(>->) : (args : Vect n Type) -> (result : Type) -> Type
+(>->) [] result = result
+(>->) (x :: xs) result = x -> ( xs >-> result)
+
+
+
+seven : [] >-> Nat
+seven = 7
+
+idty : [a] >-> a
+idty x = x
+
+compose : [(a -> b) , (b -> c)] >-> (a -> c)
+compose f g x = g (f x)
+
+mkLisTypes : (n : Nat) -> a -> Vect n a
+mkLisTypes 0 a = []
+mkLisTypes (S k) a = a :: mkLisTypes k a
+
+ary_opp : (n : Nat) -> Type -> Type
+n `ary_opp` a = (mkLisTypes n a) >-> a
+
+
+addZeroRight : (n : Nat) -> n + 0 = n
+addZeroRight 0 = Refl
+addZeroRight (S k) = cong S (addZeroRight k)
+
+
+weakened_by : Fin m -> (n : Nat) -> Fin (m + n)
+weakened_by x 0 = rewrite addZeroRight m in x
+weakened_by x (S k) = rewrite sym (plusSuccRightSucc m k) in FS (weakened_by x k)
+
+
+-- as_fin : Nat -> (b : Nat) -> Maybe (Fin b)
+-- as_fin k b = if k == b then Nothing else Just (as_top k)
+
+
+-- Lab11 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_11.pdf 
+
+data ( <=) : ( p : Nat ) -> ( n : Nat ) -> Type where
+  LeZ : 0 <= n
+  LeS : p <= n -> S p <= S n
+
+leTrans : m <= n -> n <= p -> m <= p
+leTrans LeZ y = LeZ
+leTrans (LeS x) (LeS y) = LeS (leTrans x y)
+
+
+lessS : (n : Nat) -> n <= S n 
+lessS 0 = LeZ
+lessS (S k) = LeS (lessS k)
+
+
+leWeakRight : (m , n : Nat ) -> m <= n -> m <= S n
+leWeakRight 0 n LeZ = LeZ
+leWeakRight (S p) (S n) (LeS x) = LeS (leWeakRight p n x)
+
+
+leWeakLeft : (m , n : Nat ) -> S m <= n -> m <= n
+leWeakLeft 0 (S k) (LeS x) = LeZ
+leWeakLeft (S j) (S k) (LeS x) = LeS (leWeakLeft j k x)
+
+
+zeroPlusRight : (m , n : Nat ) -> m + 0 <= m + n
+zeroPlusRight 0 n = LeZ
+zeroPlusRight (S k) n = LeS (zeroPlusRight k n)
+
+less : (n : Nat) -> n <= n
+less 0 = LeZ
+less (S k) = LeS (less k)
+
+zeroPlusLeft : (m , n : Nat ) -> 0 + n <= m + n
+zeroPlusLeft 0 n = less n
+zeroPlusLeft (S k) 0 = LeZ
+zeroPlusLeft (S k) (S j) = LeS (leTrans (lessS j) (zeroPlusLeft k (S j)))
+
+
+succPlusRight : (m , n : Nat ) -> m + n <= m + S n
+succPlusRight 0 n = lessS n
+succPlusRight (S k) n = LeS (succPlusRight k n)
+
+
+succPlusLeft : (m , n : Nat ) -> m + n <= S m + n
+succPlusLeft 0 n = lessS n
+succPlusLeft (S k) n = LeS (succPlusLeft k n)
+
+
+lisLength : (xs, ys : List a) -> length xs <= length ys -> 
+            length (x :: xs) <= length (x :: ys)
+lisLength xs ys p = LeS p
+
+
+data IsPrefix : ( xs : List a ) -> ( ys : List a ) -> Type where
+  IsPrefixNil : IsPrefix [] ys
+  IsPrefixCons : IsPrefix xs ys -> IsPrefix ( z :: xs ) ( z :: ys )
+
+prefixLen : IsPrefix xs ys -> length xs <= length ys
+prefixLen IsPrefixNil = LeZ
+prefixLen (IsPrefixCons x) = LeS (prefixLen x)
+
+
+induction : ( prop : Nat -> Type ) ->
+  ( base_case : prop 0) ->
+  ( induction_step : ( k : Nat ) -> prop k -> prop ( S k ) ) ->
+  ( n : Nat ) -> prop n
+
+lisInd : (prop : List a -> Type) -> 
+  ( base_case : prop [] ) ->
+  ( induction_step : (x : a) -> (xs : List a) -> prop xs -> prop (x :: xs) ) -> 
+  ( ys : List a ) -> prop ys
+lisInd prop base_case induction_step [] = base_case
+lisInd prop base_case induction_step (y :: xs) = 
+  induction_step y xs (lisInd prop base_case induction_step xs)
+
+  
+
+
+-- lisProp : (x : a) -> (xs : List a) -> length xs <= length (x :: xs)
+-- lisProp x [] = LeZ
+-- lisProp x ys = lisInd (\ n => length n <= length (x :: n)) (lisProp x []) lisIndStep ys where 
+--   lisIndStep : (x : a) -> (xs : List a) -> length xs <= length (y :: xs) -> length (x :: xs) <= length (y :: (x :: xs))
+--   lisIndStep x xs z = ?lisIndStep_rhs
+
