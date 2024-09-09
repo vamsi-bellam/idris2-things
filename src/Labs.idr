@@ -562,3 +562,78 @@ lisInd prop base_case induction_step (y :: xs) =
 --   lisIndStep : (x : a) -> (xs : List a) -> length xs <= length (y :: xs) -> length (x :: xs) <= length (y :: (x :: xs))
 --   lisIndStep x xs z = ?lisIndStep_rhs
 
+-- Lab12 @ https://compose.ioc.ee/courses/2023/functional_programming/lab/lab_12.pdf 
+
+-- defs for logic
+And : Type -> Type -> Type
+And = Pair
+
+Or : Type -> Type -> Type
+Or = Either
+
+
+Implies : Type -> Type -> Type
+Implies a b = a -> b
+
+Exists : ( t : Type ) -> ( p : t -> Type ) -> Type
+Exists = DPair
+
+Forall : ( t : Type ) -> ( p : t -> Type ) -> Type
+Forall t p = ( x : t ) -> p x
+
+
+and_comm : And p q -> And q p
+and_comm (x, y) = (y, x)
+
+
+and_assoc : ( p `And ` q ) `And ` r -> p `And ` ( q `And ` r )
+and_assoc ((x, z), y) = (x, (z, y))
+
+or_comm : Or p q -> Or q p
+or_comm (Left x) = Right x
+or_comm (Right y) = Left y
+
+and_distr : p `And ` ( q `Or ` r ) -> ( p `And ` q ) `Or ` ( p `And ` r )
+and_distr (x, (Left y)) = Left (x, y)
+and_distr (x, (Right y)) = Right (x, y)
+
+modus_ponens : ( ( a ` Implies ` b ) `And ` a )-> b
+modus_ponens (x, y) = x y
+
+
+-- type interp (a, b) -> c , a -> b -> c
+implies_implies : ( a `And ` b ) ` Implies ` c -> a ` Implies ` ( b ` Implies ` c )
+implies_implies f = \x => \y => f (x, y)
+
+
+implies_and : a ` Implies ` ( b `And ` c ) -> ( a ` Implies ` b ) `And ` ( a ` Implies ` c )
+implies_and f = (\arg => fst (f arg), \arg => snd (f arg))
+
+or_implies : ( a ` Implies ` c ) `And ` ( b ` Implies ` c ) -> ( a `Or ` b ) ` Implies ` c
+or_implies x (Left a) = fst x a
+or_implies x (Right b) = snd x b
+
+contraposition : a ` Implies ` b -> Not b ` Implies ` Not a
+contraposition f g = g . f
+
+
+double_negation_intro : a -> Not ( Not a )
+double_negation_intro x f = f x
+
+-- converse of above proposition
+cdni : Not ( Not a) -> a 
+-- not provable
+cdni f = ?cdni_rhs
+
+triple_negation_elim : Not ( Not ( Not a ) ) -> Not a
+triple_negation_elim f x = f (\arg => arg x)
+
+exist_and : Exists t (\ x => p x `And` q x ) `Implies` ( Exists t p `And` Exists t q )
+exist_and (a ** b) = ((a ** fst b), (a ** snd b))
+
+not_exists : Exists t p -> Not ( Forall t (\ x => Not ( p x ) ) )
+not_exists (fst ** snd) = \f => f fst snd
+
+exists_forall_then_forall_exists : { p : a -> b -> Type }
+-> Exists a (\x => Forall b (\ y => p x y ) ) `Implies` Forall b (\ y => Exists a (\ x => p x y ) )
+exists_forall_then_forall_exists (fst ** snd) = \arg => (fst ** snd arg)
