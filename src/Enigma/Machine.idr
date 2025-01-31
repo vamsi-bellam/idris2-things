@@ -1,4 +1,4 @@
-module Enigma
+module Enigma.Machine
 
 import Data.Vect
 import Data.Fin
@@ -7,7 +7,7 @@ import Data.Fin
 import Data.Vect.Sort
 import Decidable.Equality
 
-import UpperChars
+import Enigma.UpperChars
 
 
 

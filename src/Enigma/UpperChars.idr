@@ -1,4 +1,4 @@
-module UpperChars
+module Enigma.UpperChars
 
 public export
 data UpperChars = A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | 
