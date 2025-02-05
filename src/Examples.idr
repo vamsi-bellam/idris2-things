@@ -189,7 +189,6 @@ player1 = (MkPlayer "Rohit" "Sharma" "India" ((MkRanking 2 5 9)) 36 Batter)
 -- flip : (a -> b -> c) -> b -> a -> c
 -- flip f x y = f y x
 
--- Expected age to have 33, but getting -33
 player2: Player
 player2 = {firstName := "Surya", lastName := "Yadav", ranking := (MkRanking  3 6 1), age $= flip (-) 3} player1
 
@@ -217,12 +216,21 @@ Show' Nat where
 Show' Integer where 
     show' x = show x
 
+-- This is like writing a function to convert list to string
 showList: Show' a => List a -> String 
 showList ls = "[" ++ showListHelper ls ++ "]" where 
     showListHelper: List a -> String
     showListHelper [] = ""
     showListHelper (hd :: tl) = let rest = (showListHelper tl) in 
                                 if rest == "" then (show' hd) else ((show' hd) ++ "," ++ rest)
+
+-- Here we are implementing Interface Show' for (List a) , so we can use `show'` on (List a) anywhere 
+Show' a => Show' (List a) where 
+    show' ls = "[" ++ showListHelper ls ++ "]" where 
+        showListHelper: List a -> String
+        showListHelper [] = ""
+        showListHelper (hd :: tl) = let rest = (showListHelper tl) in 
+                                    if rest == "" then (show' hd) else ((show' hd) ++ "," ++ rest)
 
 -- Extending interfaces 
 
@@ -279,15 +287,7 @@ sort' ls = let (firstHalf, secondHalf) = (splitHalf ls) in
 showAndSort: (Ord' a, Show' a) => List a -> String 
 showAndSort ls = (showList (sort' ls))
 
-
--- Implementing Show' interface for List won't becauuse, List is function, but Show' interface just takes a single type 'a'
-
-
--- What is the use of this? who can use/implement this?
-interface X where
-    print: Int -> String
-
-
+-- Interfaces Stuff
 
 -- Functor
 interface Functor' (f : Type -> Type) where 
@@ -297,16 +297,18 @@ Functor' List where
   map' f []      = []
   map' f (x :: xs) = f x :: map' f xs
 
+-- Applicative
 interface Functor' f => Applicative' (0 f : Type -> Type) where 
     pure': a -> f a
+    (<**>) : f (a -> b) -> f a -> f b
 
--- Not working as expected, expected it to list value a to [a]
+infixl 2 <**>
+
 Applicative' List where
     pure' x = [x]
-
-
-interface Applicative' f => Monad' (0 f: Type -> Type) where 
-    (>>=): f a -> (a -> f b) -> f b 
+    [] <**> _ = []
+    _ <**> [] = []
+    (x :: xs) <**> (y :: ys) = x y :: (xs <**> ys)
 
 data Option a = Nothing | Just a
 
@@ -316,6 +318,14 @@ Functor' Option where
 
 Applicative' Option where 
     pure' = Just
+    Nothing <**> _ = Nothing
+    _ <**> Nothing = Nothing
+    (Just f) <**> (Just x) = Just (f x)
+
+-- Monads
+interface Applicative' f => Monad' (0 f: Type -> Type) where 
+    (>>=): f a -> (a -> f b) -> f b 
+
 
 Monad' Option where 
     Nothing >>= k = Nothing 
@@ -369,7 +379,7 @@ id' x = x
 
 
 -- This is an ideal type signature, if given a vector and returns length of vector
--- Side Note: 2 is an Integer, but return type is Nat, still no error?
+-- Side Note: 2 is an Integer, but return type is Nat, still no error? -- idris2 auto converting
 vlen: Vect n a -> Nat 
 vlen xs = 2
 
@@ -377,7 +387,8 @@ vlen xs = 2
 vlen': (n : Nat) -> Vect n a -> Nat
 vlen' n xs = n
 
--- Using curly braces means, you are stating that n (that appears in Vect) needed for usage at runtime
+-- Using curly braces means, you are stating that n (that appears in Vect) needed for usage at runtime - usage is unrestricted
+-- Whenever in doubt, just keep holes and check the types and multiplicity
 vlen'': {n : Nat} -> Vect n a -> Nat 
 vlen'' xs = n
 
@@ -446,3 +457,17 @@ filter' p (x :: xs) with (filter' p xs)
 plusReducesR : (n:Nat) -> plus n Z = n
 plusReducesR 0 = Refl
 plusReducesR (S k) = cong S (plusReducesR k)
+
+
+-- Lazy 
+
+e1 : Lazy Int
+e1 = Delay (2 + 3)
+
+e2 : Lazy Int 
+e2 = Delay (5 * 3)
+
+ite : Bool -> Lazy a -> Lazy a -> a
+ite False y z = z
+ite True y z = y
+
